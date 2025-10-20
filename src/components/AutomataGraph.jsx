@@ -16,6 +16,66 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
     svg.appendChild(g)
 
+    // Панорамирование и масштабирование
+    let scale = 1
+    let panX = 0
+    let panY = 0
+    let isPanning = false
+    let lastX = 0
+    let lastY = 0
+
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val))
+    const updateTransform = () => {
+      g.setAttribute('transform', `translate(${panX},${panY}) scale(${scale})`)
+    }
+    updateTransform()
+
+    const getMousePos = (evt) => {
+      const rect = svg.getBoundingClientRect()
+      return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+      }
+    }
+
+    const onWheel = (evt) => {
+      evt.preventDefault()
+      const delta = evt.deltaY
+      const zoomIntensity = 0.0015
+      const oldScale = scale
+      const newScale = clamp(oldScale * (1 - delta * zoomIntensity), 0.25, 5)
+      const { x: mx, y: my } = getMousePos(evt)
+
+      // Центрируем масштаб относительно позиции курсора
+      panX = mx - (mx - panX) * (newScale / oldScale)
+      panY = my - (my - panY) * (newScale / oldScale)
+      scale = newScale
+      updateTransform()
+    }
+
+    const onMouseDown = (evt) => {
+      isPanning = true
+      lastX = evt.clientX
+      lastY = evt.clientY
+    }
+    const onMouseMove = (evt) => {
+      if (!isPanning) return
+      const dx = evt.clientX - lastX
+      const dy = evt.clientY - lastY
+      lastX = evt.clientX
+      lastY = evt.clientY
+      panX += dx
+      panY += dy
+      updateTransform()
+    }
+    const endPan = () => { isPanning = false }
+
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    svg.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', endPan)
+    svg.addEventListener('mouseleave', endPan)
+
     const states = automaton.states
     const statePositions = {}
     const radius = Math.min(width, height) / 2 - margin
@@ -30,71 +90,131 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
       }
     })
 
+    // 1) Агрегируем переходы: пара (from,to) -> список символов
     const transitions = automaton.transitions
-    const drawnTransitions = new Set()
-
+    const edgeMap = new Map()
     for (const fromState in transitions) {
       for (const symbol in transitions[fromState]) {
         const toStates = transitions[fromState][symbol]
-        if (toStates.length === 0) continue
-
+        if (!toStates || toStates.length === 0) continue
         toStates.forEach(toState => {
-          const transitionKey = `${fromState}-${symbol}-${toState}`
-          if (drawnTransitions.has(transitionKey)) return
-          drawnTransitions.add(transitionKey)
-
-          const fromPos = statePositions[fromState]
-          const toPos = statePositions[toState]
-          const dx = toPos.x - fromPos.x
-          const dy = toPos.y - fromPos.y
-
-          const distance = Math.sqrt(dx * dx + dy * dy)
-          const unitX = dx / distance
-          const unitY = dy / distance
-
-          const stateRadius = 25
-          const startX = fromPos.x + unitX * stateRadius
-          const startY = fromPos.y + unitY * stateRadius
-          const endX = toPos.x - unitX * stateRadius
-          const endY = toPos.y - unitY * stateRadius
-
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-          line.setAttribute('x1', startX)
-          line.setAttribute('y1', startY)
-          line.setAttribute('x2', endX)
-          line.setAttribute('y2', endY)
-          line.setAttribute('stroke', '#374151')
-          line.setAttribute('stroke-width', '2')
-          line.setAttribute('marker-end', 'url(#arrowhead)')
-          g.appendChild(line)
-
-          if (fromState === toState) {
-            const loopRadius = 40
-            const loopX = fromPos.x + loopRadius
-            const loopY = fromPos.y - loopRadius
-            
-            const loop = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-            loop.setAttribute('d', `M ${fromPos.x + stateRadius} ${fromPos.y} A ${loopRadius} ${loopRadius} 0 1 1 ${fromPos.x - stateRadius} ${fromPos.y}`)
-            loop.setAttribute('stroke', '#374151')
-            loop.setAttribute('stroke-width', '2')
-            loop.setAttribute('fill', 'none')
-            loop.setAttribute('marker-end', 'url(#arrowhead)')
-            g.appendChild(loop)
+          const key = `${fromState}||${toState}`
+          if (!edgeMap.has(key)) {
+            edgeMap.set(key, { from: fromState, to: toState, symbols: new Set() })
           }
-
-          const midX = (startX + endX) / 2
-          const midY = (startY + endY) / 2
-          
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-          text.setAttribute('x', midX)
-          text.setAttribute('y', midY - 5)
-          text.setAttribute('text-anchor', 'middle')
-          text.setAttribute('font-size', '12')
-          text.setAttribute('fill', '#374151')
-          text.setAttribute('font-weight', 'bold')
-          text.textContent = symbol
-          g.appendChild(text)
+          edgeMap.get(key).symbols.add(symbol)
         })
+      }
+    }
+
+    const stateRadius = 25
+    const baseCurvature = 40 // базовая степень изгиба для двунаправленных рёбер
+
+    // 2) Отрисовываем рёбра
+    for (const [key, edge] of edgeMap) {
+      const fromState = edge.from
+      const toState = edge.to
+      const fromPos = statePositions[fromState]
+      const toPos = statePositions[toState]
+      const labelText = Array.from(edge.symbols).sort().join(', ')
+
+      if (fromState === toState) {
+        // Петля
+        const loopRadius = 40
+        const loop = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        loop.setAttribute('d', `M ${fromPos.x + stateRadius} ${fromPos.y} A ${loopRadius} ${loopRadius} 0 1 1 ${fromPos.x - stateRadius} ${fromPos.y}`)
+        loop.setAttribute('stroke', '#374151')
+        loop.setAttribute('stroke-width', '2')
+        loop.setAttribute('fill', 'none')
+        loop.setAttribute('marker-end', 'url(#arrowhead)')
+        g.appendChild(loop)
+
+        // Подпись петли
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        label.setAttribute('x', fromPos.x + loopRadius)
+        label.setAttribute('y', fromPos.y - loopRadius - 6)
+        label.setAttribute('text-anchor', 'middle')
+        label.setAttribute('font-size', '12')
+        label.setAttribute('fill', '#374151')
+        label.setAttribute('font-weight', 'bold')
+        label.textContent = labelText
+        g.appendChild(label)
+        continue
+      }
+
+      const dx = toPos.x - fromPos.x
+      const dy = toPos.y - fromPos.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      const unitX = dx / distance
+      const unitY = dy / distance
+
+      const startX = fromPos.x + unitX * stateRadius
+      const startY = fromPos.y + unitY * stateRadius
+      const endX = toPos.x - unitX * stateRadius
+      const endY = toPos.y - unitY * stateRadius
+
+      const reverseKey = `${toState}||${fromState}`
+      const isBidirectional = edgeMap.has(reverseKey)
+
+      if (isBidirectional) {
+        const normalX = -unitY
+        const normalY = unitX
+        const sign = fromState < toState ? 1 : -1
+        const localCurvature = Math.min(70, Math.max(30, (distance * 0.18)))
+        const cx = (startX + endX) / 2 + normalX * localCurvature * sign
+        const cy = (startY + endY) / 2 + normalY * localCurvature * sign
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('d', `M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`)
+        path.setAttribute('fill', 'none')
+        path.setAttribute('stroke', '#374151')
+        path.setAttribute('stroke-width', '2')
+        path.setAttribute('marker-end', 'url(#arrowhead)')
+        g.appendChild(path)
+
+        // Разные точки на кривой для противоположных направлений, чтобы подписи не накладывались
+        const t = fromState < toState ? 0.35 : 0.65
+        const qx = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX
+        const qy = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        // Смещаем подпись по нормали и вдоль касательной, чтобы исключить пересечения
+        label.setAttribute('x', qx + normalX * 16 * sign + unitX * 10 * sign)
+        label.setAttribute('y', qy + normalY * 16 * sign + unitY * 10 * sign)
+        label.setAttribute('text-anchor', 'middle')
+        label.setAttribute('font-size', '12')
+        label.setAttribute('fill', '#374151')
+        label.setAttribute('font-weight', 'bold')
+        label.textContent = labelText
+        g.appendChild(label)
+      } else {
+        // Обычная прямая
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+        line.setAttribute('x1', startX)
+        line.setAttribute('y1', startY)
+        line.setAttribute('x2', endX)
+        line.setAttribute('y2', endY)
+        line.setAttribute('stroke', '#374151')
+        line.setAttribute('stroke-width', '2')
+        line.setAttribute('marker-end', 'url(#arrowhead)')
+        g.appendChild(line)
+
+        // Подпись не в геометрическом центре, а ближе к концу, чтобы избежать пересечений
+        const tLine = 0.6
+        const midX = startX + (endX - startX) * tLine
+        const midY = startY + (endY - startY) * tLine
+        const normalX = -unitY
+        const normalY = unitX
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        // Добавляем смещение по касательной, чтобы уйти от геометрического центра
+        label.setAttribute('x', midX + normalX * 12 + unitX * 8)
+        label.setAttribute('y', midY + normalY * 12 + unitY * 8)
+        label.setAttribute('text-anchor', 'middle')
+        label.setAttribute('font-size', '12')
+        label.setAttribute('fill', '#374151')
+        label.setAttribute('font-weight', 'bold')
+        label.textContent = labelText
+        g.appendChild(label)
       }
     }
 
@@ -164,6 +284,15 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
     marker.appendChild(polygon)
     defs.appendChild(marker)
     svg.appendChild(defs)
+
+    // Очистка слушателей при размонтировании/перерисовке
+    return () => {
+      svg.removeEventListener('wheel', onWheel)
+      svg.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', endPan)
+      svg.removeEventListener('mouseleave', endPan)
+    }
 
   }, [automaton, isMinimized])
 

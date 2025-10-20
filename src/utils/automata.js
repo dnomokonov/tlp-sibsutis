@@ -100,91 +100,99 @@ export class FiniteAutomaton {
 
   minimize() {
     const dfa = this.convertToDFA();
-    
+    // Примечание: состояния ДКА уже представлены строками-идентификаторами.
+    // Если автомат был получен из НКА, состояния представлены как строковые ключи-множества,
+    // например "[\"q0\",\"q1\"]". Их не нужно парсить для работы алгоритма —
+    // мы используем эти строки как атомарные идентификаторы состояний.
+
+    // Начальное разбиение: финальные / нефинальные
     let partitions = [
       dfa.finalStates,
-      dfa.states.filter(state => !dfa.finalStates.includes(state))
-    ].filter(partition => partition.length > 0);
+      dfa.states.filter(s => !dfa.finalStates.includes(s))
+    ].filter(p => p.length > 0);
 
     let changed = true;
+
     while (changed) {
       changed = false;
       const newPartitions = [];
 
       for (const partition of partitions) {
-        const groups = {};
-        
+        const groups = new Map();
+
         for (const state of partition) {
           const groupKey = this.getGroupKey(state, partitions, dfa);
-          if (!groups[groupKey]) {
-            groups[groupKey] = [];
+
+          if (!groups.has(groupKey)) {
+            groups.set(groupKey, []);
           }
-          groups[groupKey].push(state);
+          groups.get(groupKey).push(state);
         }
 
-        for (const group of Object.values(groups)) {
-          if (group.length > 0) {
-            newPartitions.push(group);
-          }
+        if (groups.size > 1) {
+          changed = true;
+        }
+
+        for (const group of groups.values()) {
+          newPartitions.push(group);
         }
       }
 
-      if (newPartitions.length !== partitions.length) {
-        changed = true;
-        partitions = newPartitions;
-      }
+      partitions = newPartitions;
     }
 
-    const stateMap = {};
-    const newStates = [];
-    const newTransitions = {};
-    const newFinalStates = [];
+    // Обеспечиваем, чтобы класс, содержащий начальное состояние, был первым (станет q0)
+    const startPartitionIndex = partitions.findIndex(partition => partition.includes(dfa.startState));
+    if (startPartitionIndex > 0) {
+      const [startPartition] = partitions.splice(startPartitionIndex, 1);
+      partitions.unshift(startPartition);
+    }
 
+    // Создаем отображение старое состояние → новое
+    const stateMap = {};
     partitions.forEach((partition, index) => {
       const newState = `q${index}`;
-      newStates.push(newState);
-      stateMap[partition[0]] = newState;
-      
-      if (partition.some(state => dfa.finalStates.includes(state))) {
-        newFinalStates.push(newState);
+      for (const state of partition) {
+        stateMap[state] = newState;
       }
     });
 
+    // Строим новые переходы
+    const newTransitions = {};
     for (const partition of partitions) {
-      const newState = stateMap[partition[0]];
+      const representative = partition[0];
+      const newState = stateMap[representative];
       newTransitions[newState] = {};
-      
+
       for (const symbol of dfa.alphabet) {
-        if (dfa.transitions[partition[0]] && dfa.transitions[partition[0]][symbol]) {
-          const nextState = dfa.transitions[partition[0]][symbol][0];
-          const nextPartition = partitions.find(p => p.includes(nextState));
-          if (nextPartition) {
-            newTransitions[newState][symbol] = [stateMap[nextPartition[0]]];
-          }
+        const next = dfa.transitions[representative]?.[symbol]?.[0];
+        if (next) {
+          newTransitions[newState][symbol] = [stateMap[next]];
         }
       }
     }
 
-    const startState = stateMap[dfa.startState];
+    const newStates = partitions.map((_, index) => `q${index}`);
+    const newStartState = 'q0';
+    const newFinalStates = [...new Set(
+        dfa.finalStates.map(s => stateMap[s])
+    )];
 
     return new FiniteAutomaton(
-      newStates,
-      dfa.alphabet,
-      newTransitions,
-      startState,
-      newFinalStates
+        newStates,
+        dfa.alphabet,
+        newTransitions,
+        newStartState,
+        newFinalStates
     );
   }
 
   getGroupKey(state, partitions, dfa) {
-    const key = [];
-    
+    const keyParts = [];
+
     for (const symbol of dfa.alphabet) {
-      let nextState = null;
-      if (dfa.transitions[state] && dfa.transitions[state][symbol]) {
-        nextState = dfa.transitions[state][symbol][0];
-      }
-      
+      const nextState = dfa.transitions[state]?.[symbol]?.[0] || null;
+
       let groupIndex = -1;
       for (let i = 0; i < partitions.length; i++) {
         if (partitions[i].includes(nextState)) {
@@ -192,10 +200,11 @@ export class FiniteAutomaton {
           break;
         }
       }
-      key.push(groupIndex);
+
+      keyParts.push(`${symbol}:${groupIndex}`);
     }
-    
-    return key.join(',');
+
+    return keyParts.join('|');
   }
 
   validate() {
@@ -262,35 +271,144 @@ export function createAutomatonFromJSON(jsonData) {
   }
 }
 
+/**
+ * Парсит строковое представление определения M=({states}, {alphabet}, δ, start, {finals})
+ * Возвращает кортеж [states, alphabet, startState, finalStates]
+ */
+function parseMathDefinition(definitionLine) {
+  const trimmed = definitionLine.trim();
+  if (!trimmed) {
+    throw new Error('Пустой ввод');
+  }
+
+  const match = trimmed.match(/M\s*=\s*\(\s*\{([^}]+)\}\s*,\s*\{([^}]+)\}\s*,\s*δ\s*,\s*(\w+)\s*,\s*\{([^}]+)\}\s*\)/);
+  if (!match) {
+    throw new Error('Неверный формат определения автомата. Ожидается: M=({q0, q1, q2}, {0,1}, δ, q0, {q2})');
+  }
+
+  const states = match[1].split(',').map(s => s.trim()).filter(Boolean);
+  const alphabet = match[2].split(',').map(s => s.trim()).filter(Boolean);
+  const startState = match[3].trim();
+  const finalStates = match[4].split(',').map(s => s.trim()).filter(Boolean);
+
+  if (!states.includes(startState)) {
+    throw new Error(`Начальное состояние ${startState} не найдено в списке состояний`);
+  }
+  for (const f of finalStates) {
+    if (!states.includes(f)) {
+      throw new Error(`Финальное состояние ${f} не найдено в списке состояний`);
+    }
+  }
+
+  return [states, alphabet, startState, finalStates];
+}
+
+/**
+ * Парсит таблицу переходов из текста.
+ * Поддерживаемые форматы строк (по одной на переход):
+ *  - δ(q0, a) = q1
+ *  - q0, a -> q1
+ *  - q0 a q1
+ *  - q0,a=q1
+ *  - q0, a = {q1}
+ * Между токенами допускаются пробелы. Для ДКА допускается только один целевой узел.
+ */
+export function parseTransitionsTable(text, states, alphabet) {
+  const transitions = {};
+  states.forEach(s => {
+    transitions[s] = {};
+    alphabet.forEach(a => {
+      transitions[s][a] = [];
+    });
+  });
+
+  if (!text || !text.trim()) return transitions;
+
+  const lines = text.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+
+    // Попробуем несколько шаблонов
+    let from = null; let symbol = null; let toRaw = null;
+
+    // 1) δ(q0, a) = q1
+    let m = line.match(/^δ\s*\(\s*([^,\s]+)\s*,\s*([^\s\)]+)\s*\)\s*=\s*(.+)$/);
+    if (m) {
+      from = m[1]; symbol = m[2]; toRaw = m[3];
+    }
+
+    // 2) q0, a -> q1
+    if (!from) {
+      m = line.match(/^([^,\s]+)\s*,\s*([^\s]+)\s*->\s*(.+)$/);
+      if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
+    }
+
+    // 3) q0 a q1  (через пробел)
+    if (!from) {
+      m = line.match(/^([^\s,]+)\s+([^\s,]+)\s+(\S.*)$/);
+      if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
+    }
+
+    // 4) q0,a=q1
+    if (!from) {
+      m = line.match(/^([^,\s]+)\s*,\s*([^\s]+)\s*=\s*(.+)$/);
+      if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
+    }
+
+    if (!from || !symbol || !toRaw) {
+      throw new Error(`Не удалось разобрать строку перехода: "${line}"`);
+    }
+
+    if (!states.includes(from)) {
+      throw new Error(`Переход из неизвестного состояния: ${from}`);
+    }
+    if (!alphabet.includes(symbol)) {
+      throw new Error(`Переход по неизвестному символу алфавита: ${symbol}`);
+    }
+
+    // Разбираем правую часть: может быть q1 или {q1} или {q1, q2}
+    let targets = [];
+    const brace = toRaw.match(/^\{([^}]+)\}$/);
+    if (brace) {
+      targets = brace[1].split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      targets = toRaw.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    if (targets.length === 0) continue;
+    if (targets.length > 1) {
+      throw new Error(`Для ДКА должен быть один целевой переход: ${from}, ${symbol}`);
+    }
+
+    const to = targets[0];
+    if (!states.includes(to)) {
+      throw new Error(`Целевое состояние не найдено: ${to}`);
+    }
+
+    transitions[from][symbol] = [to];
+  }
+
+  return transitions;
+}
+
+/**
+ * Создает автомат из математического определения и явной таблицы переходов.
+ * При отсутствии записи для пары (q, a) оставляет пустой переход.
+ */
+export function createAutomatonFromDefinitionAndTransitions(mathNotation, transitionsText) {
+  try {
+    const [states, alphabet, startState, finalStates] = parseMathDefinition(mathNotation);
+    const transitions = parseTransitionsTable(transitionsText || '', states, alphabet);
+    return new FiniteAutomaton(states, alphabet, transitions, startState, finalStates);
+  } catch (error) {
+    throw new Error('Ошибка при создании автомата из определения и таблицы переходов: ' + error.message);
+  }
+}
+
 export function createAutomatonFromMathNotation(mathNotation) {
   try {
-    const definitionLine = mathNotation.trim();
-    
-    if (!definitionLine) {
-      throw new Error('Пустой ввод');
-    }
-
-    const definitionMatch = definitionLine.match(/M\s*=\s*\(\s*\{([^}]+)\}\s*,\s*\{([^}]+)\}\s*,\s*δ\s*,\s*(\w+)\s*,\s*\{([^}]+)\}\s*\)/);
-    
-    if (!definitionMatch) {
-      throw new Error('Неверный формат определения автомата. Ожидается: M=({q0, q1, q2}, {0,1}, δ, q0, {q2})');
-    }
-
-    const states = definitionMatch[1].split(',').map(s => s.trim()).filter(s => s);
-    const alphabet = definitionMatch[2].split(',').map(s => s.trim()).filter(s => s);
-    const startState = definitionMatch[3].trim();
-    const finalStates = definitionMatch[4].split(',').map(s => s.trim()).filter(s => s);
-
-    if (!states.includes(startState)) {
-      throw new Error(`Начальное состояние ${startState} не найдено в списке состояний`);
-    }
-
-    for (const finalState of finalStates) {
-      if (!states.includes(finalState)) {
-        throw new Error(`Финальное состояние ${finalState} не найдено в списке состояний`);
-      }
-    }
-
+    const [states, alphabet, startState, finalStates] = parseMathDefinition(mathNotation);
     const transitions = {};
 
     states.forEach(state => {
