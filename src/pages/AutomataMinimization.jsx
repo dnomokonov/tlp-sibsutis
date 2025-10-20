@@ -32,6 +32,25 @@ function AutomataMinimization() {
     setInputTransitions(exampleTransitions)
   }
 
+  const handleLoadNFAExample = () => {
+    const nfaExample = createExampleNFA()
+    const nfaMath = `M=({${nfaExample.states.join(', ')}}, {${nfaExample.alphabet.join(', ')}}, δ, ${nfaExample.startState}, {${nfaExample.finalStates.join(', ')}})`
+
+    // Создаем текстовое представление переходов
+    const nfaTransitions = []
+    for (const state in nfaExample.transitions) {
+      for (const symbol in nfaExample.transitions[state]) {
+        const targets = nfaExample.transitions[state][symbol]
+        if (targets.length > 0) {
+          nfaTransitions.push(`${state} ${symbol} ${targets.join(', ')}`)
+        }
+      }
+    }
+
+    setInputMath(nfaMath)
+    setInputTransitions(nfaTransitions.join('\n'))
+  }
+
   const handleAnalyze = () => {
     try {
       const hasTransitions = inputTransitions && inputTransitions.trim().length > 0
@@ -141,8 +160,14 @@ function AutomataMinimization() {
                 onClick={handleLoadExample}
                 className="px-4 py-2 !p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
               >
-                Загрузить пример
+                Загрузить пример ДКА
               </button>
+              {/*<button*/}
+              {/*  onClick={handleLoadNFAExample}*/}
+              {/*  className="px-4 py-2 !p-1 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"*/}
+              {/*>*/}
+              {/*  Загрузить пример НКА*/}
+              {/*</button>*/}
               <button
                 onClick={handleAnalyze}
                 className="px-4 py-2 !p-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"

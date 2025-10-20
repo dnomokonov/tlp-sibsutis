@@ -311,7 +311,8 @@ function parseMathDefinition(definitionLine) {
  *  - q0 a q1
  *  - q0,a=q1
  *  - q0, a = {q1}
- * Между токенами допускаются пробелы. Для ДКА допускается только один целевой узел.
+ *  - q0, a = {q1, q2} (для недетерминированных переходов)
+ * Между токенами допускаются пробелы. Поддерживает как ДКА, так и НКА.
  */
 export function parseTransitionsTable(text, states, alphabet) {
   const transitions = {};
@@ -377,16 +378,25 @@ export function parseTransitionsTable(text, states, alphabet) {
     }
 
     if (targets.length === 0) continue;
-    if (targets.length > 1) {
-      throw new Error(`Для ДКА должен быть один целевой переход: ${from}, ${symbol}`);
+
+    // Проверяем, что все целевые состояния существуют
+    for (const target of targets) {
+      if (!states.includes(target)) {
+        throw new Error(`Целевое состояние не найдено: ${target}`);
+      }
     }
 
-    const to = targets[0];
-    if (!states.includes(to)) {
-      throw new Error(`Целевое состояние не найдено: ${to}`);
+    // Добавляем целевые состояния к уже существующим (поддерживаем недетерминированность)
+    // Если переход уже существует, добавляем новые состояния к существующим
+    if (transitions[from][symbol].length > 0) {
+      // Объединяем с уже существующими переходами
+      const existingTargets = transitions[from][symbol];
+      const newTargets = targets.filter(target => !existingTargets.includes(target));
+      transitions[from][symbol] = [...existingTargets, ...newTargets];
+    } else {
+      // Первый переход для этой пары (состояние, символ)
+      transitions[from][symbol] = targets;
     }
-
-    transitions[from][symbol] = [to];
   }
 
   return transitions;
@@ -427,7 +437,23 @@ export function createAutomatonFromMathNotation(mathNotation) {
       
       alphabet.forEach(symbol => {
         if (Math.random() < 0.8) {
-          transitions[currentState][symbol] = [nextState];
+          // Случайно создаем детерминированный или недетерминированный переход
+          if (Math.random() < 0.8) {
+            // Детерминированный переход
+            transitions[currentState][symbol] = [nextState];
+          } else {
+            // Недетерминированный переход
+            const additionalStates = states.filter(s => s !== currentState && s !== nextState);
+            const numAdditional = Math.min(1, Math.floor(Math.random() * 2));
+            const selectedStates = [nextState];
+            
+            for (let j = 0; j < numAdditional && additionalStates.length > 0; j++) {
+              const randomIndex = Math.floor(Math.random() * additionalStates.length);
+              selectedStates.push(additionalStates.splice(randomIndex, 1)[0]);
+            }
+            
+            transitions[currentState][symbol] = selectedStates;
+          }
         }
       });
     }
@@ -443,8 +469,25 @@ export function createAutomatonFromMathNotation(mathNotation) {
     states.forEach(fromState => {
       alphabet.forEach(symbol => {
         if (transitions[fromState][symbol].length === 0 && Math.random() < 0.3) {
-          const randomNextState = states[Math.floor(Math.random() * states.length)];
-          transitions[fromState][symbol] = [randomNextState];
+          // Случайно создаем детерминированный или недетерминированный переход
+          if (Math.random() < 0.7) {
+            // Детерминированный переход
+            const randomNextState = states[Math.floor(Math.random() * states.length)];
+            transitions[fromState][symbol] = [randomNextState];
+          } else {
+            // Недетерминированный переход (2-3 целевых состояния)
+            const numTargets = Math.random() < 0.5 ? 2 : 3;
+            const availableStates = states.filter(s => s !== fromState);
+            const selectedStates = [];
+            
+            for (let i = 0; i < Math.min(numTargets, availableStates.length); i++) {
+              const randomIndex = Math.floor(Math.random() * availableStates.length);
+              const selectedState = availableStates.splice(randomIndex, 1)[0];
+              selectedStates.push(selectedState);
+            }
+            
+            transitions[fromState][symbol] = selectedStates;
+          }
         }
       });
     });
