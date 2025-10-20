@@ -16,7 +16,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
     svg.appendChild(g)
 
-    // Панорамирование и масштабирование
     let scale = 1
     let panX = 0
     let panY = 0
@@ -116,7 +115,7 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
       const toState = edge.to
       const fromPos = statePositions[fromState]
       const toPos = statePositions[toState]
-      const labelText = Array.from(edge.symbols).sort().join(', ')
+      const labelTextBase = Array.from(edge.symbols).sort().join(', ')
 
       if (fromState === toState) {
         // Петля
@@ -137,7 +136,7 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         label.setAttribute('font-size', '12')
         label.setAttribute('fill', '#374151')
         label.setAttribute('font-weight', 'bold')
-        label.textContent = labelText
+        label.textContent = labelTextBase
         g.appendChild(label)
         continue
       }
@@ -172,21 +171,31 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         path.setAttribute('marker-end', 'url(#arrowhead)')
         g.appendChild(path)
 
-        // Разные точки на кривой для противоположных направлений, чтобы подписи не накладывались
-        const t = fromState < toState ? 0.35 : 0.65
-        const qx = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX
-        const qy = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY
+        // Для двунаправленных рёбер подписываем ОДИН раз на паре (A,B): объединяем символы A→B и B→A
+        // Рисуем подпись только когда fromState < toState, чтобы не дублировать
+        if (fromState < toState) {
+          const reverseEdge = edgeMap.get(reverseKey)
+          const combined = new Set([...(edge.symbols || []), ...((reverseEdge && reverseEdge.symbols) || [])])
+          const labelText = Array.from(combined).sort().join(', ')
 
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-        // Смещаем подпись по нормали и вдоль касательной, чтобы исключить пересечения
-        label.setAttribute('x', qx + normalX * 16 * sign + unitX * 10 * sign)
-        label.setAttribute('y', qy + normalY * 16 * sign + unitY * 10 * sign)
-        label.setAttribute('text-anchor', 'middle')
-        label.setAttribute('font-size', '12')
-        label.setAttribute('fill', '#374151')
-        label.setAttribute('font-weight', 'bold')
-        label.textContent = labelText
-        g.appendChild(label)
+          // Точка на кривой в середине пары и смещение наружу
+          const t = 0.5
+          const qx = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX
+          const qy = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY
+
+          const offsetN = 16 + Math.min(26, localCurvature * 0.35)
+          const lx = qx + normalX * offsetN * sign
+          const ly = qy + normalY * offsetN * sign
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+          text.setAttribute('x', lx)
+          text.setAttribute('y', ly)
+          text.setAttribute('text-anchor', 'middle')
+          text.setAttribute('font-size', '12')
+          text.setAttribute('fill', '#374151')
+          text.setAttribute('font-weight', 'bold')
+          text.textContent = labelText
+          g.appendChild(text)
+        }
       } else {
         // Обычная прямая
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
@@ -205,16 +214,19 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         const midY = startY + (endY - startY) * tLine
         const normalX = -unitY
         const normalY = unitX
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-        // Добавляем смещение по касательной, чтобы уйти от геометрического центра
-        label.setAttribute('x', midX + normalX * 12 + unitX * 8)
-        label.setAttribute('y', midY + normalY * 12 + unitY * 8)
-        label.setAttribute('text-anchor', 'middle')
-        label.setAttribute('font-size', '12')
-        label.setAttribute('fill', '#374151')
-        label.setAttribute('font-weight', 'bold')
-        label.textContent = labelText
-        g.appendChild(label)
+        const offsetN = 14 + Math.max(0, 30 - distance * 0.1)
+        const offsetT = 10
+        const lx = midX + normalX * offsetN + unitX * offsetT
+        const ly = midY + normalY * offsetN + unitY * offsetT
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        text.setAttribute('x', lx)
+        text.setAttribute('y', ly)
+        text.setAttribute('text-anchor', 'middle')
+        text.setAttribute('font-size', '12')
+        text.setAttribute('fill', '#374151')
+        text.setAttribute('font-weight', 'bold')
+        text.textContent = labelTextBase
+        g.appendChild(text)
       }
     }
 
