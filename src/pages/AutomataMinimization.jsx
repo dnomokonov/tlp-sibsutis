@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FiniteAutomaton, createAutomatonFromMathNotation, createAutomatonFromDefinitionAndTransitions, createExampleNFA } from '../utils/automata'
+import { FiniteAutomaton, createAutomatonFromMathNotation, createAutomatonFromDefinitionAndTransitions, createExampleNFA, createComplexNFA } from '../utils/automata'
 import AutomataGraph from '../components/AutomataGraph'
 
 function AutomataMinimization() {
@@ -7,7 +7,9 @@ function AutomataMinimization() {
   const [inputTransitions, setInputTransitions] = useState('')
   const [automaton, setAutomaton] = useState(null)
   const [minimizedAutomaton, setMinimizedAutomaton] = useState(null)
+  const [dfaAutomaton, setDfaAutomaton] = useState(null)
   const [isDeterministic, setIsDeterministic] = useState(null)
+  const [isNFA, setIsNFA] = useState(null)
   const [validationErrors, setValidationErrors] = useState([])
   const [stepByStepProcess, setStepByStepProcess] = useState([])
 
@@ -51,6 +53,26 @@ function AutomataMinimization() {
     setInputTransitions(nfaTransitions.join('\n'))
   }
 
+
+  const handleLoadComplexNFAExample = () => {
+    const nfaExample = createComplexNFA()
+    const nfaMath = `M=({${nfaExample.states.join(', ')}}, {${nfaExample.alphabet.join(', ')}}, δ, ${nfaExample.startState}, {${nfaExample.finalStates.join(', ')}})`
+
+    // Создаем текстовое представление переходов
+    const nfaTransitions = []
+    for (const state in nfaExample.transitions) {
+      for (const symbol in nfaExample.transitions[state]) {
+        const targets = nfaExample.transitions[state][symbol]
+        if (targets.length > 0) {
+          nfaTransitions.push(`${state} ${symbol} ${targets.join(', ')}`)
+        }
+      }
+    }
+
+    setInputMath(nfaMath)
+    setInputTransitions(nfaTransitions.join('\n'))
+  }
+
   const handleAnalyze = () => {
     try {
       const hasTransitions = inputTransitions && inputTransitions.trim().length > 0
@@ -63,7 +85,9 @@ function AutomataMinimization() {
         setValidationErrors(validation.errors)
         setAutomaton(null)
         setMinimizedAutomaton(null)
+        setDfaAutomaton(null)
         setIsDeterministic(null)
+        setIsNFA(null)
         setStepByStepProcess([])
         return
       }
@@ -71,33 +95,63 @@ function AutomataMinimization() {
       setValidationErrors([])
       setAutomaton(newAutomaton)
       const isDet = newAutomaton.isDeterministic()
+      const isNFAValue = newAutomaton.isNFA()
       setIsDeterministic(isDet)
-
-      if (!isDet) {
-        setValidationErrors(['Ошибка: Автомат является недетерминированным (НКА). Работа только с ДКА!'])
-        setAutomaton(null)
-        setMinimizedAutomaton(null)
-        setStepByStepProcess([])
-        return
-      }
-
-      const minimized = newAutomaton.minimize()
-      setMinimizedAutomaton(minimized)
+      setIsNFA(isNFAValue)
 
       const steps = []
-      steps.push({
-        step: 1,
-        title: 'Исходный ДКА',
-        description: 'Загруженный детерминированный конечный автомат',
-        automaton: newAutomaton
-      })
-      
-      steps.push({
-        step: 2,
-        title: 'Минимизированный ДКА',
-        description: 'Результат применения алгоритма минимизации Хопкрофта',
-        automaton: minimized
-      })
+      let dfaAutomaton = null
+      let minimizedAutomaton = null
+
+      if (isNFAValue) {
+        // Если это НКА, преобразуем в ДКА
+        dfaAutomaton = newAutomaton.convertToDFA()
+        setDfaAutomaton(dfaAutomaton)
+        
+        // Затем минимизируем ДКА
+        minimizedAutomaton = dfaAutomaton.minimize()
+        setMinimizedAutomaton(minimizedAutomaton)
+
+        steps.push({
+          step: 1,
+          title: 'Исходный НКА',
+          description: 'Загруженный недетерминированный конечный автомат',
+          automaton: newAutomaton
+        })
+        
+        steps.push({
+          step: 2,
+          title: 'Преобразованный ДКА',
+          description: 'Результат преобразования НКА в ДКА',
+          automaton: dfaAutomaton
+        })
+        
+        steps.push({
+          step: 3,
+          title: 'Минимизированный ДКА',
+          description: 'Результат минимизации ДКА',
+          automaton: minimizedAutomaton
+        })
+      } else {
+        // Если это ДКА, просто минимизируем (без преобразования)
+        minimizedAutomaton = newAutomaton.minimize()
+        setMinimizedAutomaton(minimizedAutomaton)
+        setDfaAutomaton(null) // Убеждаемся, что ДКА не преобразуется
+
+        steps.push({
+          step: 1,
+          title: 'Исходный ДКА',
+          description: 'Загруженный детерминированный конечный автомат',
+          automaton: newAutomaton
+        })
+        
+        steps.push({
+          step: 2,
+          title: 'Минимизированный ДКА',
+          description: 'Результат применения алгоритма минимизации Хопкрофта',
+          automaton: minimizedAutomaton
+        })
+      }
       
       setStepByStepProcess(steps)
       
@@ -105,7 +159,9 @@ function AutomataMinimization() {
       setValidationErrors([error.message])
       setAutomaton(null)
       setMinimizedAutomaton(null)
+      setDfaAutomaton(null)
       setIsDeterministic(null)
+      setIsNFA(null)
       setStepByStepProcess([])
     }
   }
@@ -115,7 +171,9 @@ function AutomataMinimization() {
     setInputTransitions('')
     setAutomaton(null)
     setMinimizedAutomaton(null)
+    setDfaAutomaton(null)
     setIsDeterministic(null)
+    setIsNFA(null)
     setValidationErrors([])
     setStepByStepProcess([])
   }
@@ -124,7 +182,7 @@ function AutomataMinimization() {
     <div className="min-h-screen flex flex-col items-center justify-center mx-auto p-6 gap-4 bg-gray-50">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-          Минимизация ДКА
+          Преобразование НКА в ДКА и минимизация
         </h1>
         
         <div className="flex flex-col items-center justify-center gap-6">
@@ -151,23 +209,29 @@ function AutomataMinimization() {
                 placeholder={"Примеры форматов строк:\nδ(q0, 0) = q1\nq0, 1 -> q2\nq1 0 q3\nq2,1=q5\nq3, 1 = {q4}"}
               />
               <p className="text-xs text-gray-500 mt-1">
-                ⚠️ Для ДКА у каждой пары (состояние, символ) допускается только один целевой переход.
+                💡 Для НКА допускаются множественные переходы: <span className="font-mono bg-gray-100 px-1 rounded">q0 a q1, q2</span> или <span className="font-mono bg-gray-100 px-1 rounded">δ(q0, a) = &#123;q1, q2&#125;</span>
               </p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleLoadExample}
                 className="px-4 py-2 !p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
               >
-                Загрузить пример ДКА
+                Пример ДКА
               </button>
-              {/*<button*/}
-              {/*  onClick={handleLoadNFAExample}*/}
-              {/*  className="px-4 py-2 !p-1 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"*/}
-              {/*>*/}
-              {/*  Загрузить пример НКА*/}
-              {/*</button>*/}
+              <button
+                onClick={handleLoadNFAExample}
+                className="px-4 py-2 !p-1 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
+              >
+                Пример НКА
+              </button>
+              <button
+                onClick={handleLoadComplexNFAExample}
+                className="px-4 py-2 !p-1 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+              >
+                Сложный НКА
+              </button>
               <button
                 onClick={handleAnalyze}
                 className="px-4 py-2 !p-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
@@ -200,37 +264,48 @@ function AutomataMinimization() {
 
          {isDeterministic !== null && (
              <div className={`border rounded-md !p-4 ${
-                 isDeterministic ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                 isDeterministic ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'
              }`}>
                <h3 className={`font-semibold mb-2 ${
-                   isDeterministic ? 'text-green-800' : 'text-red-800'
+                   isDeterministic ? 'text-green-800' : 'text-orange-800'
                }`}>
-                 Детерминированность:
+                 Тип автомата:
                </h3>
                <p className={`text-sm ${
-                   isDeterministic ? 'text-green-700' : 'text-red-700'
+                   isDeterministic ? 'text-green-700' : 'text-orange-700'
                }`}>
                  {isDeterministic
-                     ? '✅ Автомат является детерминированным (ДКА) - готов к минимизации'
-                     : '❌ Автомат является недетерминированным (НКА) - работа только с ДКА!'
+                     ? '✅ Детерминированный конечный автомат (ДКА) - готов к минимизации'
+                     : '🔄 Недетерминированный конечный автомат (НКА) - будет преобразован в ДКА'
                  }
                </p>
              </div>
          )}
 
-        <div className="flex flex-row gap-4">
+        <div className="flex flex-row gap-4 flex-wrap">
           {automaton && (
               <div className="bg-blue-50 border border-blue-200 rounded-md !p-4">
-                <h3 className="text-blue-800 font-semibold mb-2">Исходный автомат:</h3>
+                <h3 className="text-blue-800 font-semibold mb-2">
+                  {isNFA ? 'Исходный НКА:' : 'Исходный ДКА:'}
+                </h3>
                 <div className="text-sm text-blue-700 font-mono whitespace-pre-line">
                   {automaton.toString()}
                 </div>
               </div>
           )}
 
+          {dfaAutomaton && (
+              <div className="bg-green-50 border border-green-200 rounded-md !p-4">
+                <h3 className="text-green-800 font-semibold mb-2">Преобразованный ДКА:</h3>
+                <div className="text-sm text-green-700 font-mono whitespace-pre-line">
+                  {dfaAutomaton.toString()}
+                </div>
+              </div>
+          )}
+
           {minimizedAutomaton && (
               <div className="bg-purple-50 border border-purple-200 rounded-md !p-4">
-                <h3 className="text-purple-800 font-semibold mb-2">Минимизированный автомат:</h3>
+                <h3 className="text-purple-800 font-semibold mb-2">Минимизированный ДКА:</h3>
                 <div className="text-sm text-purple-700 font-mono whitespace-pre-line">
                   {minimizedAutomaton.toString()}
                 </div>
@@ -241,7 +316,9 @@ function AutomataMinimization() {
 
       {stepByStepProcess.length > 0 && (
           <div className="bg-white rounded-lg shadow-lg !p-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6">Пошаговый процесс минимизации</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+              {isNFA ? 'Пошаговый процесс преобразования НКА в ДКА и минимизации' : 'Пошаговый процесс минимизации ДКА'}
+            </h2>
 
             <div className="flex flex-row items-start justify-center gap-2 !space-y-6">
               {stepByStepProcess.map((step, index) => (
@@ -290,16 +367,24 @@ function AutomataMinimization() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex flex-col items-center justify-center gap-2 !space-y-6">
               <AutomataGraph
                   automaton={automaton}
-                  title={`Исходный автомат (${automaton.states.length} состояний)`}
+                  title={`${isNFA ? 'Исходный НКА' : 'Исходный ДКА'} (${automaton.states.length} состояний)`}
               />
+
+              {dfaAutomaton && (
+                  <AutomataGraph
+                      automaton={dfaAutomaton}
+                      title={`Преобразованный ДКА (${dfaAutomaton.states.length} состояний)`}
+                      isConverted={true}
+                  />
+              )}
 
               {minimizedAutomaton && (
                   <AutomataGraph
                       automaton={minimizedAutomaton}
-                      title={`Минимизированный автомат (${minimizedAutomaton.states.length} состояний)`}
+                      title={`Минимизированный ДКА (${minimizedAutomaton.states.length} состояний)`}
                       isMinimized={true}
                   />
               )}
@@ -309,20 +394,21 @@ function AutomataMinimization() {
       )}
 
       <div className="!p-6 mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Формат ввода ДКА</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Формат ввода автоматов</h2>
         <div className="text-sm text-gray-700 !space-y-2">
-          <p>Введите только определение детерминированного конечного автомата (ДКА) в математической нотации. Программа автоматически сгенерирует переходы:</p>
+          <p>Введите определение конечного автомата (ДКА или НКА) в математической нотации. Программа поддерживает как детерминированные, так и недетерминированные автоматы:</p>
           <pre className="bg-white !p-4 rounded border text-xs overflow-x-auto">
             {`M=({q0, q1, q2, q3, q4, q5}, {0,1}, δ, q0, {q4, q5})`}
           </pre>
           <ul className="list-disc list-inside !space-y-1 ml-4">
-            <li><strong>M=(&#123;состояния&#125;, &#123;алфавит&#125;, δ, начальное, &#123;финальные&#125;)</strong> - определение ДКА</li>
-            <li><strong>Состояния</strong> - список состояний через запятую: <code>q0, q1, q2</code></li>
-            <li><strong>Алфавит</strong> - символы входного алфавита: <code>0, 1</code> или <code>a, b</code></li>
-            <li><strong>Начальное состояние</strong> - одно из состояний: <code>q0</code></li>
-            <li><strong>Финальные состояния</strong> - одно или несколько состояний: <code>q2</code> или <code>q4, q5</code></li>
-            <li><strong>Переходы генерируются автоматически</strong> - программа создает детерминированные переходы</li>
-            <li><strong>⚠️ Только ДКА!</strong> - НКА не поддерживаются, будет выдана ошибка</li>
+            <li><strong>M=(&#123;состояния&#125;, &#123;алфавит&#125;, δ, начальное, &#123;финальные&#125;)</strong> - определение автомата</li>
+            <li><strong>Состояния</strong> - список состояний через запятую: <span className="font-mono bg-gray-100 px-1 rounded">q0, q1, q2</span></li>
+            <li><strong>Алфавит</strong> - символы входного алфавита: <span className="font-mono bg-gray-100 px-1 rounded">0, 1</span> или <span className="font-mono bg-gray-100 px-1 rounded">a, b</span> (для ε-переходов используйте <span className="font-mono bg-gray-100 px-1 rounded">ε</span>)</li>
+            <li><strong>Начальное состояние</strong> - одно из состояний: <span className="font-mono bg-gray-100 px-1 rounded">q0</span></li>
+            <li><strong>Финальные состояния</strong> - одно или несколько состояний: <span className="font-mono bg-gray-100 px-1 rounded">q2</span> или <span className="font-mono bg-gray-100 px-1 rounded">q4, q5</span></li>
+            <li><strong>Переходы</strong> - можно задать явно в таблице переходов или сгенерировать автоматически</li>
+            <li><strong>🔄 НКА → ДКА</strong> - недетерминированные автоматы автоматически преобразуются в ДКА</li>
+            <li><strong>📉 Минимизация</strong> - полученный ДКА минимизируется для оптимального размера</li>
           </ul>
         </div>
       </div>

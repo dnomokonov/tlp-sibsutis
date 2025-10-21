@@ -27,25 +27,34 @@ export class FiniteAutomaton {
     const dfaTransitions = {};
     const dfaFinalStates = new Set();
     const queue = [];
+    const stateMap = new Map(); // Для отслеживания соответствия между множествами состояний и их строковыми представлениями
     
+    // Начальное состояние ДКА - ε-замыкание начального состояния НКА
     const startClosure = this.epsilonClosure([this.startState]);
     const startStateSet = new Set(startClosure);
-    dfaStates.add(JSON.stringify([...startStateSet].sort()));
-    queue.push(startStateSet);
+    const startStateKey = this.createStateKey(startStateSet);
+    
+    dfaStates.add(startStateKey);
+    stateMap.set(startStateKey, startStateSet);
+    queue.push(startStateKey);
 
+    // Проверяем, является ли начальное состояние финальным
     if ([...startStateSet].some(state => this.finalStates.includes(state))) {
-      dfaFinalStates.add(JSON.stringify([...startStateSet].sort()));
+      dfaFinalStates.add(startStateKey);
     }
 
     while (queue.length > 0) {
-      const currentStateSet = queue.shift();
-      const currentStateKey = JSON.stringify([...currentStateSet].sort());
+      const currentStateKey = queue.shift();
+      const currentStateSet = stateMap.get(currentStateKey);
       
       dfaTransitions[currentStateKey] = {};
 
       for (const symbol of this.alphabet) {
+        if (symbol === 'ε') continue; // Пропускаем ε-переходы в ДКА
+        
         const nextStates = new Set();
         
+        // Для каждого состояния в текущем множестве состояний
         for (const state of currentStateSet) {
           if (this.transitions[state] && this.transitions[state][symbol]) {
             for (const nextState of this.transitions[state][symbol]) {
@@ -55,14 +64,20 @@ export class FiniteAutomaton {
         }
 
         if (nextStates.size > 0) {
-          const nextStateKey = JSON.stringify([...nextStates].sort());
+          // Вычисляем ε-замыкание для полученных состояний
+          const nextClosure = this.epsilonClosure([...nextStates]);
+          const nextStateSet = new Set(nextClosure);
+          const nextStateKey = this.createStateKey(nextStateSet);
+          
           dfaTransitions[currentStateKey][symbol] = [nextStateKey];
           
           if (!dfaStates.has(nextStateKey)) {
             dfaStates.add(nextStateKey);
-            queue.push(nextStates);
+            stateMap.set(nextStateKey, nextStateSet);
+            queue.push(nextStateKey);
             
-            if ([...nextStates].some(state => this.finalStates.includes(state))) {
+            // Проверяем, содержит ли новое состояние финальные состояния НКА
+            if ([...nextStateSet].some(state => this.finalStates.includes(state))) {
               dfaFinalStates.add(nextStateKey);
             }
           }
@@ -72,10 +87,105 @@ export class FiniteAutomaton {
 
     return new FiniteAutomaton(
       [...dfaStates],
-      this.alphabet,
+      this.alphabet.filter(symbol => symbol !== 'ε'), // Исключаем ε из алфавита ДКА
       dfaTransitions,
-      JSON.stringify([...startClosure].sort()),
+      startStateKey,
       [...dfaFinalStates]
+    );
+  }
+
+  // Создает строковый ключ для множества состояний
+  createStateKey(stateSet) {
+    return JSON.stringify([...stateSet].sort());
+  }
+
+  // Проверяет, является ли автомат НКА (содержит недетерминированные переходы или ε-переходы)
+  isNFA() {
+    // Проверяем на недетерминированные переходы
+    for (const state in this.transitions) {
+      for (const symbol in this.transitions[state]) {
+        if (this.transitions[state][symbol].length > 1) {
+          return true;
+        }
+      }
+    }
+    
+    // Проверяем на ε-переходы
+    for (const state in this.transitions) {
+      if (this.transitions[state]['ε'] && this.transitions[state]['ε'].length > 0) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  // Добавляет ε-переход между двумя состояниями
+  addEpsilonTransition(fromState, toState) {
+    if (!this.transitions[fromState]) {
+      this.transitions[fromState] = {};
+    }
+    if (!this.transitions[fromState]['ε']) {
+      this.transitions[fromState]['ε'] = [];
+    }
+    if (!this.transitions[fromState]['ε'].includes(toState)) {
+      this.transitions[fromState]['ε'].push(toState);
+    }
+  }
+
+  // Удаляет ε-переходы из автомата (преобразует в ДКА без ε-переходов)
+  removeEpsilonTransitions() {
+    const newTransitions = {};
+    
+    // Инициализируем новые переходы
+    for (const state of this.states) {
+      newTransitions[state] = {};
+      for (const symbol of this.alphabet) {
+        if (symbol !== 'ε') {
+          newTransitions[state][symbol] = [];
+        }
+      }
+    }
+
+    // Для каждого состояния вычисляем ε-замыкание и добавляем переходы
+    for (const state of this.states) {
+      const epsilonClosure = this.epsilonClosure([state]);
+      
+      for (const symbol of this.alphabet) {
+        if (symbol === 'ε') continue;
+        
+        const nextStates = new Set();
+        
+        // Для каждого состояния в ε-замыкании
+        for (const closureState of epsilonClosure) {
+          if (this.transitions[closureState] && this.transitions[closureState][symbol]) {
+            for (const nextState of this.transitions[closureState][symbol]) {
+              nextStates.add(nextState);
+            }
+          }
+        }
+        
+        if (nextStates.size > 0) {
+          newTransitions[state][symbol] = [...nextStates];
+        }
+      }
+    }
+
+    // Обновляем финальные состояния
+    const newFinalStates = [];
+    for (const state of this.states) {
+      const epsilonClosure = this.epsilonClosure([state]);
+      if (epsilonClosure.some(s => this.finalStates.includes(s))) {
+        newFinalStates.push(state);
+      }
+    }
+
+    return new FiniteAutomaton(
+      this.states,
+      this.alphabet.filter(symbol => symbol !== 'ε'),
+      newTransitions,
+      this.startState,
+      newFinalStates
     );
   }
 
@@ -529,5 +639,38 @@ export function createExampleNFA() {
     },
     'q0',
     ['q3']
+  );
+}
+
+export function createExampleNFAWithEpsilon() {
+  return new FiniteAutomaton(
+    ['q0', 'q1', 'q2', 'q3', 'q4'],
+    ['a', 'b', 'ε'],
+    {
+      'q0': { 'a': ['q1'], 'ε': ['q2'] },
+      'q1': { 'b': ['q3'] },
+      'q2': { 'a': ['q4'] },
+      'q3': { 'ε': ['q4'] },
+      'q4': { 'b': ['q4'] }
+    },
+    'q0',
+    ['q4']
+  );
+}
+
+export function createComplexNFA() {
+  return new FiniteAutomaton(
+    ['q0', 'q1', 'q2', 'q3', 'q4', 'q5'],
+    ['a', 'b', 'c', 'ε'],
+    {
+      'q0': { 'a': ['q1', 'q2'], 'ε': ['q3'] },
+      'q1': { 'b': ['q4'], 'ε': ['q2'] },
+      'q2': { 'c': ['q5'] },
+      'q3': { 'a': ['q4'] },
+      'q4': { 'b': ['q5'], 'ε': ['q1'] },
+      'q5': { 'c': ['q5'] }
+    },
+    'q0',
+    ['q5']
   );
 }
