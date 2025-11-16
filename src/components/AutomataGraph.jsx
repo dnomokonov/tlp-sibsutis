@@ -45,7 +45,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
       const newScale = clamp(oldScale * (1 - delta * zoomIntensity), 0.25, 5)
       const { x: mx, y: my } = getMousePos(evt)
 
-      // Центрируем масштаб относительно позиции курсора
       panX = mx - (mx - panX) * (newScale / oldScale)
       panY = my - (my - panY) * (newScale / oldScale)
       scale = newScale
@@ -89,7 +88,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
       }
     })
 
-    // 1) Агрегируем переходы: пара (from,to) -> список символов
     const transitions = automaton.transitions
     const edgeMap = new Map()
     for (const fromState in transitions) {
@@ -107,9 +105,8 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
     }
 
     const stateRadius = 25
-    const baseCurvature = 40 // базовая степень изгиба для двунаправленных рёбер
+    const baseCurvature = 40
 
-    // 2) Отрисовываем рёбра
     for (const [key, edge] of edgeMap) {
       const fromState = edge.from
       const toState = edge.to
@@ -118,7 +115,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
       const labelTextBase = Array.from(edge.symbols).sort().join(', ')
 
       if (fromState === toState) {
-        // Петля
         const loopRadius = 40
         const loop = document.createElementNS('http://www.w3.org/2000/svg', 'path')
         loop.setAttribute('d', `M ${fromPos.x + stateRadius} ${fromPos.y} A ${loopRadius} ${loopRadius} 0 1 1 ${fromPos.x - stateRadius} ${fromPos.y}`)
@@ -128,7 +124,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         loop.setAttribute('marker-end', 'url(#arrowhead)')
         g.appendChild(loop)
 
-        // Подпись петли
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
         label.setAttribute('x', fromPos.x + loopRadius)
         label.setAttribute('y', fromPos.y - loopRadius - 6)
@@ -171,14 +166,11 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         path.setAttribute('marker-end', 'url(#arrowhead)')
         g.appendChild(path)
 
-        // Для двунаправленных рёбер подписываем ОДИН раз на паре (A,B): объединяем символы A→B и B→A
-        // Рисуем подпись только когда fromState < toState, чтобы не дублировать
         if (fromState < toState) {
           const reverseEdge = edgeMap.get(reverseKey)
           const combined = new Set([...(edge.symbols || []), ...((reverseEdge && reverseEdge.symbols) || [])])
           const labelText = Array.from(combined).sort().join(', ')
 
-          // Точка на кривой в середине пары и смещение наружу
           const t = 0.5
           const qx = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX
           const qy = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY
@@ -197,7 +189,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
           g.appendChild(text)
         }
       } else {
-        // Обычная прямая
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
         line.setAttribute('x1', startX)
         line.setAttribute('y1', startY)
@@ -208,7 +199,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
         line.setAttribute('marker-end', 'url(#arrowhead)')
         g.appendChild(line)
 
-        // Подпись не в геометрическом центре, а ближе к концу, чтобы избежать пересечений
         const tLine = 0.6
         const midX = startX + (endX - startX) * tLine
         const midY = startY + (endY - startY) * tLine
@@ -297,7 +287,6 @@ const AutomataGraph = ({ automaton, title, isMinimized = false }) => {
     defs.appendChild(marker)
     svg.appendChild(defs)
 
-    // Очистка слушателей при размонтировании/перерисовке
     return () => {
       svg.removeEventListener('wheel', onWheel)
       svg.removeEventListener('mousedown', onMouseDown)

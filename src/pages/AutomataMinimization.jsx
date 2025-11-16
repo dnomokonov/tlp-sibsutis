@@ -38,7 +38,6 @@ function AutomataMinimization() {
     const nfaExample = createExampleNFA()
     const nfaMath = `M=({${nfaExample.states.join(', ')}}, {${nfaExample.alphabet.join(', ')}}, δ, ${nfaExample.startState}, {${nfaExample.finalStates.join(', ')}})`
 
-    // Создаем текстовое представление переходов
     const nfaTransitions = []
     for (const state in nfaExample.transitions) {
       for (const symbol in nfaExample.transitions[state]) {
@@ -58,7 +57,6 @@ function AutomataMinimization() {
     const nfaExample = createComplexNFA()
     const nfaMath = `M=({${nfaExample.states.join(', ')}}, {${nfaExample.alphabet.join(', ')}}, δ, ${nfaExample.startState}, {${nfaExample.finalStates.join(', ')}})`
 
-    // Создаем текстовое представление переходов
     const nfaTransitions = []
     for (const state in nfaExample.transitions) {
       for (const symbol in nfaExample.transitions[state]) {
@@ -136,7 +134,7 @@ function AutomataMinimization() {
         // Если это ДКА, просто минимизируем (без преобразования)
         minimizedAutomaton = newAutomaton.minimize()
         setMinimizedAutomaton(minimizedAutomaton)
-        setDfaAutomaton(null) // Убеждаемся, что ДКА не преобразуется
+        setDfaAutomaton(null)
 
         steps.push({
           step: 1,
@@ -214,24 +212,6 @@ function AutomataMinimization() {
             </div>
             
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleLoadExample}
-                className="px-4 py-2 !p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Пример ДКА
-              </button>
-              <button
-                onClick={handleLoadNFAExample}
-                className="px-4 py-2 !p-1 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
-              >
-                Пример НКА
-              </button>
-              <button
-                onClick={handleLoadComplexNFAExample}
-                className="px-4 py-2 !p-1 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
-              >
-                Сложный НКА
-              </button>
               <button
                 onClick={handleAnalyze}
                 className="px-4 py-2 !p-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
@@ -345,28 +325,6 @@ function AutomataMinimization() {
           <div className="bg-white rounded-lg shadow-lg !p-6 mt-6 !space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Визуализация автоматов</h2>
 
-            {minimizedAutomaton && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg !p-4 mb-6">
-                  <h3 className="text-lg font-semibold text-blue-800 mb-2">Результат минимизации</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{automaton.states.length}</div>
-                      <div className="text-blue-700">Исходных состояний</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{minimizedAutomaton.states.length}</div>
-                      <div className="text-green-700">После минимизации</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {Math.round((1 - minimizedAutomaton.states.length / automaton.states.length) * 100)}%
-                      </div>
-                      <div className="text-purple-700">Сокращение</div>
-                    </div>
-                  </div>
-                </div>
-            )}
-
             <div className="flex flex-col items-center justify-center gap-2 !space-y-6">
               <AutomataGraph
                   automaton={automaton}
@@ -393,25 +351,6 @@ function AutomataMinimization() {
           </div>
       )}
 
-      <div className="!p-6 mt-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Формат ввода автоматов</h2>
-        <div className="text-sm text-gray-700 !space-y-2">
-          <p>Введите определение конечного автомата (ДКА или НКА) в математической нотации. Программа поддерживает как детерминированные, так и недетерминированные автоматы:</p>
-          <pre className="bg-white !p-4 rounded border text-xs overflow-x-auto">
-            {`M=({q0, q1, q2, q3, q4, q5}, {0,1}, δ, q0, {q4, q5})`}
-          </pre>
-          <ul className="list-disc list-inside !space-y-1 ml-4">
-            <li><strong>M=(&#123;состояния&#125;, &#123;алфавит&#125;, δ, начальное, &#123;финальные&#125;)</strong> - определение автомата</li>
-            <li><strong>Состояния</strong> - список состояний через запятую: <span className="font-mono bg-gray-100 px-1 rounded">q0, q1, q2</span></li>
-            <li><strong>Алфавит</strong> - символы входного алфавита: <span className="font-mono bg-gray-100 px-1 rounded">0, 1</span> или <span className="font-mono bg-gray-100 px-1 rounded">a, b</span> (для ε-переходов используйте <span className="font-mono bg-gray-100 px-1 rounded">ε</span>)</li>
-            <li><strong>Начальное состояние</strong> - одно из состояний: <span className="font-mono bg-gray-100 px-1 rounded">q0</span></li>
-            <li><strong>Финальные состояния</strong> - одно или несколько состояний: <span className="font-mono bg-gray-100 px-1 rounded">q2</span> или <span className="font-mono bg-gray-100 px-1 rounded">q4, q5</span></li>
-            <li><strong>Переходы</strong> - можно задать явно в таблице переходов или сгенерировать автоматически</li>
-            <li><strong>🔄 НКА → ДКА</strong> - недетерминированные автоматы автоматически преобразуются в ДКА</li>
-            <li><strong>📉 Минимизация</strong> - полученный ДКА минимизируется для оптимального размера</li>
-          </ul>
-        </div>
-      </div>
     </div>
   )
 }

@@ -27,9 +27,8 @@ export class FiniteAutomaton {
     const dfaTransitions = {};
     const dfaFinalStates = new Set();
     const queue = [];
-    const stateMap = new Map(); // Для отслеживания соответствия между множествами состояний и их строковыми представлениями
-    
-    // Начальное состояние ДКА - ε-замыкание начального состояния НКА
+    const stateMap = new Map();
+
     const startClosure = this.epsilonClosure([this.startState]);
     const startStateSet = new Set(startClosure);
     const startStateKey = this.createStateKey(startStateSet);
@@ -38,7 +37,6 @@ export class FiniteAutomaton {
     stateMap.set(startStateKey, startStateSet);
     queue.push(startStateKey);
 
-    // Проверяем, является ли начальное состояние финальным
     if ([...startStateSet].some(state => this.finalStates.includes(state))) {
       dfaFinalStates.add(startStateKey);
     }
@@ -50,11 +48,10 @@ export class FiniteAutomaton {
       dfaTransitions[currentStateKey] = {};
 
       for (const symbol of this.alphabet) {
-        if (symbol === 'ε') continue; // Пропускаем ε-переходы в ДКА
+        if (symbol === 'ε') continue;
         
         const nextStates = new Set();
-        
-        // Для каждого состояния в текущем множестве состояний
+
         for (const state of currentStateSet) {
           if (this.transitions[state] && this.transitions[state][symbol]) {
             for (const nextState of this.transitions[state][symbol]) {
@@ -64,7 +61,6 @@ export class FiniteAutomaton {
         }
 
         if (nextStates.size > 0) {
-          // Вычисляем ε-замыкание для полученных состояний
           const nextClosure = this.epsilonClosure([...nextStates]);
           const nextStateSet = new Set(nextClosure);
           const nextStateKey = this.createStateKey(nextStateSet);
@@ -75,8 +71,7 @@ export class FiniteAutomaton {
             dfaStates.add(nextStateKey);
             stateMap.set(nextStateKey, nextStateSet);
             queue.push(nextStateKey);
-            
-            // Проверяем, содержит ли новое состояние финальные состояния НКА
+
             if ([...nextStateSet].some(state => this.finalStates.includes(state))) {
               dfaFinalStates.add(nextStateKey);
             }
@@ -87,21 +82,18 @@ export class FiniteAutomaton {
 
     return new FiniteAutomaton(
       [...dfaStates],
-      this.alphabet.filter(symbol => symbol !== 'ε'), // Исключаем ε из алфавита ДКА
+      this.alphabet.filter(symbol => symbol !== 'ε'),
       dfaTransitions,
       startStateKey,
       [...dfaFinalStates]
     );
   }
 
-  // Создает строковый ключ для множества состояний
   createStateKey(stateSet) {
     return JSON.stringify([...stateSet].sort());
   }
 
-  // Проверяет, является ли автомат НКА (содержит недетерминированные переходы или ε-переходы)
   isNFA() {
-    // Проверяем на недетерминированные переходы
     for (const state in this.transitions) {
       for (const symbol in this.transitions[state]) {
         if (this.transitions[state][symbol].length > 1) {
@@ -109,8 +101,7 @@ export class FiniteAutomaton {
         }
       }
     }
-    
-    // Проверяем на ε-переходы
+
     for (const state in this.transitions) {
       if (this.transitions[state]['ε'] && this.transitions[state]['ε'].length > 0) {
         return true;
@@ -120,7 +111,6 @@ export class FiniteAutomaton {
     return false;
   }
 
-  // Добавляет ε-переход между двумя состояниями
   addEpsilonTransition(fromState, toState) {
     if (!this.transitions[fromState]) {
       this.transitions[fromState] = {};
@@ -133,11 +123,9 @@ export class FiniteAutomaton {
     }
   }
 
-  // Удаляет ε-переходы из автомата (преобразует в ДКА без ε-переходов)
   removeEpsilonTransitions() {
     const newTransitions = {};
-    
-    // Инициализируем новые переходы
+
     for (const state of this.states) {
       newTransitions[state] = {};
       for (const symbol of this.alphabet) {
@@ -147,7 +135,6 @@ export class FiniteAutomaton {
       }
     }
 
-    // Для каждого состояния вычисляем ε-замыкание и добавляем переходы
     for (const state of this.states) {
       const epsilonClosure = this.epsilonClosure([state]);
       
@@ -155,8 +142,7 @@ export class FiniteAutomaton {
         if (symbol === 'ε') continue;
         
         const nextStates = new Set();
-        
-        // Для каждого состояния в ε-замыкании
+
         for (const closureState of epsilonClosure) {
           if (this.transitions[closureState] && this.transitions[closureState][symbol]) {
             for (const nextState of this.transitions[closureState][symbol]) {
@@ -171,7 +157,6 @@ export class FiniteAutomaton {
       }
     }
 
-    // Обновляем финальные состояния
     const newFinalStates = [];
     for (const state of this.states) {
       const epsilonClosure = this.epsilonClosure([state]);
@@ -210,12 +195,7 @@ export class FiniteAutomaton {
 
   minimize() {
     const dfa = this.convertToDFA();
-    // Примечание: состояния ДКА уже представлены строками-идентификаторами.
-    // Если автомат был получен из НКА, состояния представлены как строковые ключи-множества,
-    // например "[\"q0\",\"q1\"]". Их не нужно парсить для работы алгоритма —
-    // мы используем эти строки как атомарные идентификаторы состояний.
 
-    // Начальное разбиение: финальные / нефинальные
     let partitions = [
       dfa.finalStates,
       dfa.states.filter(s => !dfa.finalStates.includes(s))
@@ -251,14 +231,12 @@ export class FiniteAutomaton {
       partitions = newPartitions;
     }
 
-    // Обеспечиваем, чтобы класс, содержащий начальное состояние, был первым (станет q0)
     const startPartitionIndex = partitions.findIndex(partition => partition.includes(dfa.startState));
     if (startPartitionIndex > 0) {
       const [startPartition] = partitions.splice(startPartitionIndex, 1);
       partitions.unshift(startPartition);
     }
 
-    // Создаем отображение старое состояние → новое
     const stateMap = {};
     partitions.forEach((partition, index) => {
       const newState = `q${index}`;
@@ -267,7 +245,6 @@ export class FiniteAutomaton {
       }
     });
 
-    // Строим новые переходы
     const newTransitions = {};
     for (const partition of partitions) {
       const representative = partition[0];
@@ -381,10 +358,6 @@ export function createAutomatonFromJSON(jsonData) {
   }
 }
 
-/**
- * Парсит строковое представление определения M=({states}, {alphabet}, δ, start, {finals})
- * Возвращает кортеж [states, alphabet, startState, finalStates]
- */
 function parseMathDefinition(definitionLine) {
   const trimmed = definitionLine.trim();
   if (!trimmed) {
@@ -413,17 +386,6 @@ function parseMathDefinition(definitionLine) {
   return [states, alphabet, startState, finalStates];
 }
 
-/**
- * Парсит таблицу переходов из текста.
- * Поддерживаемые форматы строк (по одной на переход):
- *  - δ(q0, a) = q1
- *  - q0, a -> q1
- *  - q0 a q1
- *  - q0,a=q1
- *  - q0, a = {q1}
- *  - q0, a = {q1, q2} (для недетерминированных переходов)
- * Между токенами допускаются пробелы. Поддерживает как ДКА, так и НКА.
- */
 export function parseTransitionsTable(text, states, alphabet) {
   const transitions = {};
   states.forEach(s => {
@@ -440,28 +402,23 @@ export function parseTransitionsTable(text, states, alphabet) {
     const line = rawLine.trim();
     if (!line || line.startsWith('#') || line.startsWith('//')) continue;
 
-    // Попробуем несколько шаблонов
     let from = null; let symbol = null; let toRaw = null;
 
-    // 1) δ(q0, a) = q1
     let m = line.match(/^δ\s*\(\s*([^,\s]+)\s*,\s*([^\s\)]+)\s*\)\s*=\s*(.+)$/);
     if (m) {
       from = m[1]; symbol = m[2]; toRaw = m[3];
     }
 
-    // 2) q0, a -> q1
     if (!from) {
       m = line.match(/^([^,\s]+)\s*,\s*([^\s]+)\s*->\s*(.+)$/);
       if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
     }
 
-    // 3) q0 a q1  (через пробел)
     if (!from) {
       m = line.match(/^([^\s,]+)\s+([^\s,]+)\s+(\S.*)$/);
       if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
     }
 
-    // 4) q0,a=q1
     if (!from) {
       m = line.match(/^([^,\s]+)\s*,\s*([^\s]+)\s*=\s*(.+)$/);
       if (m) { from = m[1]; symbol = m[2]; toRaw = m[3]; }
@@ -478,7 +435,6 @@ export function parseTransitionsTable(text, states, alphabet) {
       throw new Error(`Переход по неизвестному символу алфавита: ${symbol}`);
     }
 
-    // Разбираем правую часть: может быть q1 или {q1} или {q1, q2}
     let targets = [];
     const brace = toRaw.match(/^\{([^}]+)\}$/);
     if (brace) {
@@ -489,22 +445,17 @@ export function parseTransitionsTable(text, states, alphabet) {
 
     if (targets.length === 0) continue;
 
-    // Проверяем, что все целевые состояния существуют
     for (const target of targets) {
       if (!states.includes(target)) {
         throw new Error(`Целевое состояние не найдено: ${target}`);
       }
     }
 
-    // Добавляем целевые состояния к уже существующим (поддерживаем недетерминированность)
-    // Если переход уже существует, добавляем новые состояния к существующим
     if (transitions[from][symbol].length > 0) {
-      // Объединяем с уже существующими переходами
       const existingTargets = transitions[from][symbol];
       const newTargets = targets.filter(target => !existingTargets.includes(target));
       transitions[from][symbol] = [...existingTargets, ...newTargets];
     } else {
-      // Первый переход для этой пары (состояние, символ)
       transitions[from][symbol] = targets;
     }
   }
@@ -512,10 +463,6 @@ export function parseTransitionsTable(text, states, alphabet) {
   return transitions;
 }
 
-/**
- * Создает автомат из математического определения и явной таблицы переходов.
- * При отсутствии записи для пары (q, a) оставляет пустой переход.
- */
 export function createAutomatonFromDefinitionAndTransitions(mathNotation, transitionsText) {
   try {
     const [states, alphabet, startState, finalStates] = parseMathDefinition(mathNotation);
@@ -547,12 +494,9 @@ export function createAutomatonFromMathNotation(mathNotation) {
       
       alphabet.forEach(symbol => {
         if (Math.random() < 0.8) {
-          // Случайно создаем детерминированный или недетерминированный переход
           if (Math.random() < 0.8) {
-            // Детерминированный переход
             transitions[currentState][symbol] = [nextState];
           } else {
-            // Недетерминированный переход
             const additionalStates = states.filter(s => s !== currentState && s !== nextState);
             const numAdditional = Math.min(1, Math.floor(Math.random() * 2));
             const selectedStates = [nextState];
@@ -579,13 +523,10 @@ export function createAutomatonFromMathNotation(mathNotation) {
     states.forEach(fromState => {
       alphabet.forEach(symbol => {
         if (transitions[fromState][symbol].length === 0 && Math.random() < 0.3) {
-          // Случайно создаем детерминированный или недетерминированный переход
           if (Math.random() < 0.7) {
-            // Детерминированный переход
             const randomNextState = states[Math.floor(Math.random() * states.length)];
             transitions[fromState][symbol] = [randomNextState];
           } else {
-            // Недетерминированный переход (2-3 целевых состояния)
             const numTargets = Math.random() < 0.5 ? 2 : 3;
             const availableStates = states.filter(s => s !== fromState);
             const selectedStates = [];

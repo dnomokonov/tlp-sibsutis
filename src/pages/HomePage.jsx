@@ -42,6 +42,31 @@ function HomePage() {
               </div>
             </div>
           </Link>
+
+          <Link
+              to="/dmpautomatics"
+              className="group bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="text-center !p-4">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-orange-200 transition-colors">
+
+                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 8V5a2 2 0 012-2h8a2 2 0 012 2v3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21h8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21v-2a1 1 0 011-1h2a1 1 0 011 1v2" />
+                </svg>
+
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-orange-600 transition-colors">
+                ДМП-автомат
+              </h2>
+              <div className="inline-flex items-center text-orange-700 font-semibold group-hover:text-orange-700 transition-colors">
+                Перейти к дмп-автомату
+              </div>
+            </div>
+          </Link>
+
         </div>
       </div>
     </div>
