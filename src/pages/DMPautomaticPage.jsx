@@ -57,7 +57,7 @@ function DMPautomaticPage() {
                             id="stepFunction"
                             rows="10"
                             className="!mt-1 w-full !px-2 !py-2 bg-gray-100 rounded-md border-1 border-gray-300 text-sm resize-y"
-                            placeholder="Введите функции"
+                            placeholder={"Пример переходов:\nδ(q0,a,Z) = (q0,aZ)\nδ(q0,a,a) = (q0,aaZ)\nδ(q0,b,a) = (q1,ε)\nδ(q1,b,a) = (q1,ε)\nδ(q1,ε,Z) = (q2,ε)"}
                         ></textarea>
                     </label>
 
