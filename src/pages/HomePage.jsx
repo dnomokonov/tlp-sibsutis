@@ -67,6 +67,23 @@ function HomePage() {
             </div>
           </Link>
 
+          <Link
+            to="/dmpcreate"
+            className="group bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="text-center !p-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-emerald-200 transition-colors">
+                <p className="text-emerald-600 text-2xl">{'{ }'}</p>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-emerald-600 transition-colors">
+                Функции для ДМПА
+              </h2>
+              <div className="inline-flex items-center text-emerald-700 font-semibold group-hover:text-emerald-700 transition-colors">
+                Создание функций переходов ДМПА
+              </div>
+            </div>
+          </Link>
+
         </div>
       </div>
     </div>

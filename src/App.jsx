@@ -3,6 +3,7 @@ import ArithmeticParser from './pages/ArithmeticParser'
 import AutomataMinimization from './pages/AutomataMinimization'
 import HomePage from './pages/HomePage'
 import DMPautomaticPage from './pages/DMPautomaticPage'
+import DMPFunctionCreatePage from "./pages/DMPFunctionCreatePage.jsx";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
             <Route path="/parser" element={<ArithmeticParser />} />
             <Route path="/automata" element={<AutomataMinimization />} />
             <Route path="/dmpautomatics" element={<DMPautomaticPage />} />
+            <Route path="/dmpcreate" element={<DMPFunctionCreatePage />} />
         </Routes>
     </Router>
   )
