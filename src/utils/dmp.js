@@ -10,9 +10,9 @@ export class DMP {
     }
 
     static parse(description) {
-        // Неправильный парс аргументов, возвращает строку на элемент массива
-        const parts = description.replace(/[\{\}\s]/g, '').split('),(').map(p => p.replace(/[()]/g, ''))
-        console.log(parts)
+        const parts = description.replaceAll(" ", "").match(/\{[^}]*\}|[^,]+/g).map(
+            x => x.startsWith("{") && x.endsWith("}") ? x.slice(1, -1) : x
+        )
 
         if (parts.length !== 7) throw new Error('Неверный формат ДМП')
 
@@ -22,28 +22,36 @@ export class DMP {
         const stackAlphabet = stackStr.split(',').filter(Boolean)
         const acceptStates = acceptStr.split(',').filter(Boolean)
 
-        if (!states.includes(startState)) throw new Error('Начальное состояние не в множестве состояний');
-        if (!acceptStates.every(s => states.includes(s))) throw new Error('Финальное состояние вне множества');
-        if (!stackAlphabet.includes(startStack)) throw new Error('Начальный символ стека не в алфавите стека');
+        if (!states.includes(startState)) throw new Error('Начальное состояние не в множестве состояний')
+        if (!acceptStates.every(s => states.includes(s))) throw new Error('Финальное состояние вне множества')
+        if (!stackAlphabet.includes(startStack)) throw new Error('Начальный символ стека не в алфавите стека')
 
         return {states, inputAlphabet, stackAlphabet, startState, startStackSymbol: startStack, acceptStates}
     }
 
     static parseTransitions(text) {
         const transitions = new Map()
-        const lines = text.trim().split('\n').map(line => line.trim()).filter(Boolean)
+        const lines = text.trim().split('\n')
 
         for (let line of lines) {
-            const match = line.match(/δ\(([^,]+),([^,]*),([^)]+)\)\s*=\s*\(([^,]+),([^)]+)\)/);
-            if (!match) continue;
+            line = line.trim()
+            if (!line) continue
 
-            const [, currState, input, stackTop, newState, pushStr] = match;
-            const key = `${currState},${input || 'ε'},${stackTop}`;
-            const value = [newState, pushStr === 'ε' ? '' : pushStr];
-            transitions.set(key, value);
+            const match = line.match(/δ\s*\(\s*([^,]+)\s*,\s*([^,]*?)\s*,\s*([^)]+?)\s*\)\s*=\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/)
+            if (!match) {
+                console.warn('Пропущена строка (не распознана):', line)
+                continue
+            }
+
+            const [, currState, inputSym, stackTop, newState, pushStr] = match
+            const input = inputSym.trim() || 'ε'
+            const key = `${currState.trim()},${input},${stackTop.trim()}`
+            const push = pushStr.trim() === 'ε' ? '' : pushStr.trim()
+
+            transitions.set(key, [newState.trim(), push])
         }
 
-        return transitions;
+        return transitions
     }
 
     dmpStart(inputString, maxSteps = 1000) {
@@ -53,25 +61,45 @@ export class DMP {
         let pos = 0
         let steps = 0
 
-        const pushConfig = () => {
+        const pushConfig = (action = '') => {
             configHistory.push({
                 state,
                 remaining: inputString.slice(pos),
                 stack: [...stack],
                 step: steps,
-                action: ''
+                action
             })
         }
 
         pushConfig()
 
-        while (pos <= inputString.length && steps < maxSteps) {
+        if (pos === inputString.length && this.acceptStates.has(state)) {
+            return {
+                accepted: true,
+                reason: 'Цепочка принята по финальному состоянию',
+                history: configHistory
+            }
+        }
+
+        while (steps < maxSteps) {
             const input = pos < inputString.length ? inputString[pos] : 'ε'
             const stackTop = stack.length > 0 ? stack[stack.length - 1] : 'ε'
-
             const key1 = `${state},${input},${stackTop}`
             const key2 = `${state},ε,${stackTop}`
-            const transition = this.transitions.get(key1) || this.transitions.get(key2)
+
+            let transition = null
+            let usedKey = null
+            let inputUsed = input
+
+            if (input !== 'ε' && this.transitions.has(key1)) {
+                transition = this.transitions.get(key1)
+                usedKey = key1
+            }
+            else if (this.transitions.has(key2)) {
+                transition = this.transitions.get(key2)
+                usedKey = key2
+                inputUsed = 'ε'
+            }
 
             if (!transition) {
                 return {
@@ -83,6 +111,8 @@ export class DMP {
 
             const [newState, pushStr] = transition
 
+            const action = `δ(${state},${inputUsed},${stackTop}) → (${newState},${pushStr || 'ε'})`
+
             if (stack.length > 0) stack.pop()
 
             if (pushStr && pushStr !== 'ε') {
@@ -92,13 +122,11 @@ export class DMP {
             }
 
             state = newState
-            if (input !== 'ε') pos++
+
+            if (inputUsed !== 'ε') pos++
+
             steps++
-
-            const action = `δ(${state},${input !== 'ε' ? input : 'ε'},${stackTop}) → (${newState},${pushStr || 'ε'})`
-            configHistory[configHistory.length - 1].action = action
-
-            pushConfig()
+            pushConfig(action)
 
             if (pos === inputString.length && this.acceptStates.has(state)) {
                 return {
@@ -107,19 +135,11 @@ export class DMP {
                     history: configHistory
                 }
             }
-
-            if (steps >= maxSteps) {
-                return {
-                    accepted: false,
-                    reason: 'Превышено максимальное число шагов (возможна бесконечная петля)',
-                    history: configHistory
-                }
-            }
         }
 
         return {
             accepted: false,
-            reason: 'Цепочка не была полностью прочитана или не достигнуто финальное состояние',
+            reason: 'Превышено максимальное число шагов (возможна бесконечная петля)',
             history: configHistory
         }
     }

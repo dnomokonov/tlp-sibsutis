@@ -89,7 +89,7 @@ function DMPautomaticPage() {
                 </div>
 
                 {result && (
-                    <div className={`mt-6 p-4 rounded-lg border-2 ${result.accepted ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+                    <div className={`!mt-6 !p-4 rounded-lg border-2 ${result.accepted ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
                         <p className="font-bold text-lg">
                             {result.accepted ? '✅ Цепочка ПРИНЯТА' : '❌ Цепочка НЕ ПРИНЯТА'}
                         </p>
@@ -107,7 +107,7 @@ function DMPautomaticPage() {
                 )}
 
                 {showSteps && result?.history && (
-                    <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
+                    <div className="!mt-4 !p-4 bg-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                             <tr className="border-b">
