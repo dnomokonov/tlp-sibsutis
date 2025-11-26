@@ -37,7 +37,7 @@ export class DMP {
             line = line.trim()
             if (!line) continue
 
-            const match = line.match(/δ\s*\(\s*([^,]+)\s*,\s*([^,]*?)\s*,\s*([^)]+?)\s*\)\s*=\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/)
+            const match = line.match(/\s*\(\s*([^,]+)\s*,\s*([^,]*?)\s*,\s*([^)]+?)\s*\)\s*=\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/)
             if (!match) {
                 console.warn('Пропущена строка (не распознана):', line)
                 continue

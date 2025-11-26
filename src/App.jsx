@@ -3,7 +3,6 @@ import ArithmeticParser from './pages/ArithmeticParser'
 import AutomataMinimization from './pages/AutomataMinimization'
 import HomePage from './pages/HomePage'
 import DMPautomaticPage from './pages/DMPautomaticPage'
-import DMPFunctionCreatePage from "./pages/DMPFunctionCreatePage.jsx";
 
 function App() {
   return (
