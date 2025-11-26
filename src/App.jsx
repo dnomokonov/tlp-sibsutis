@@ -13,7 +13,6 @@ function App() {
             <Route path="/parser" element={<ArithmeticParser />} />
             <Route path="/automata" element={<AutomataMinimization />} />
             <Route path="/dmpautomatics" element={<DMPautomaticPage />} />
-            <Route path="/dmpcreate" element={<DMPFunctionCreatePage />} />
         </Routes>
     </Router>
   )
