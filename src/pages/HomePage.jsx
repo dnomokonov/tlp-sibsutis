@@ -67,6 +67,27 @@ function HomePage() {
             </div>
           </Link>
 
+          <Link
+              to="/conrpn"
+              className="group bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="text-center !p-4">
+              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-indigo-200 transition-colors">
+                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l3 3m-6 0l3-3M12 19a2 2 0 100-4 2 2 0 000 4z" />
+                  <circle cx="9" cy="9" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="9" r="1.5" fill="currentColor" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-indigo-600 transition-colors">
+                МП-преобразователь
+              </h2>
+              <div className="inline-flex items-center text-indigo-700 font-semibold group-hover:text-indigo-700  transition-colors">
+                для перевода в ОПЗ
+              </div>
+            </div>
+          </Link>
+
         </div>
       </div>
     </div>
