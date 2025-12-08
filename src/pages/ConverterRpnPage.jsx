@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import { RPNTransducer } from '../utils/convert.js';
 
 export default function ConverterRpnPage() {
@@ -9,7 +9,7 @@ export default function ConverterRpnPage() {
     const [error, setError] = useState('');
     const [trace, setTrace] = useState([]);
 
-    const runConversion = (expr) => {
+    const runConversion = useCallback((expr) => {
         setError('');
         setResult('');
         const transducer = new RPNTransducer();
@@ -19,7 +19,7 @@ export default function ConverterRpnPage() {
         } catch (e) {
             setError(e.message);
         }
-    };
+    }, []);
 
     const runTrace = (expr) => {
         setError('');
@@ -28,6 +28,7 @@ export default function ConverterRpnPage() {
         try {
             transducer.convert(expr.trim());
             setTrace(transducer.getTrace());
+            setInputExpr(expr);
         } catch (e) {
             setError(e.message);
         }
@@ -35,7 +36,13 @@ export default function ConverterRpnPage() {
 
     useEffect(() => {
         runConversion(inputExpr);
-    }, [inputExpr]);
+        if (traceExpr) {
+            runTrace(traceExpr);
+        } else {
+            runTrace('');
+            setInputExpr('');
+        }
+    }, [inputExpr, traceExpr]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -124,7 +131,6 @@ export default function ConverterRpnPage() {
                                         value={traceExpr}
                                         onChange={(e) => {
                                             setTraceExpr(e.target.value);
-                                            runTrace(e.target.value);
                                         }}
                                         className="w-full !px-4 !py-3 border border-gray-300 rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="Введите выражение..."
@@ -155,7 +161,7 @@ export default function ConverterRpnPage() {
                                                 <div className="col-span-1 !p-4 text-center font-bold">{step.step}</div>
                                                 <div className="col-span-2 !p-4 text-center">{step.input}</div>
                                                 <div className="col-span-4 !p-4">
-                                                    [{step.stack.join(' | ') || 'пусто'}]
+                                                    [{step.stack.join(' , ') || 'пусто'}]
                                                 </div>
                                                 <div className="col-span-5 p-4">{step.output.join(' ')}</div>
                                             </div>
