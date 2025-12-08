@@ -4,7 +4,6 @@ import { RPNTransducer } from '../utils/convert.js';
 export default function ConverterRpnPage() {
     const [activeTab, setActiveTab] = useState('converter');
     const [inputExpr, setInputExpr] = useState('(5 + 3) * 2');
-    const [traceExpr, setTraceExpr] = useState('(5 + 3) * 2');
     const [result, setResult] = useState('');
     const [error, setError] = useState('');
     const [trace, setTrace] = useState([]);
@@ -28,21 +27,20 @@ export default function ConverterRpnPage() {
         try {
             transducer.convert(expr.trim());
             setTrace(transducer.getTrace());
-            setInputExpr(expr);
         } catch (e) {
             setError(e.message);
         }
     };
 
     useEffect(() => {
-        runConversion(inputExpr);
-        if (traceExpr) {
-            runTrace(traceExpr);
+        if (inputExpr.trim()) {
+            runConversion(inputExpr);
+            runTrace(inputExpr);
         } else {
             runTrace('');
             setInputExpr('');
         }
-    }, [inputExpr, traceExpr]);
+    }, [inputExpr, runConversion]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -89,10 +87,7 @@ export default function ConverterRpnPage() {
                                     <input
                                         type="text"
                                         value={inputExpr}
-                                        onChange={(e) => {
-                                            setInputExpr(e.target.value);
-                                            runConversion(e.target.value);
-                                        }}
+                                        onChange={(e) => setInputExpr(e.target.value)}
                                         className="w-full !px-4 !py-3 border border-gray-300 rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         placeholder="Например: (5 + 3) * 12 / 4"
                                     />
@@ -128,10 +123,8 @@ export default function ConverterRpnPage() {
                                     </label>
                                     <input
                                         type="text"
-                                        value={traceExpr}
-                                        onChange={(e) => {
-                                            setTraceExpr(e.target.value);
-                                        }}
+                                        value={inputExpr}
+                                        onChange={(e) => setInputExpr(e.target.value)}
                                         className="w-full !px-4 !py-3 border border-gray-300 rounded-lg font-mono text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="Введите выражение..."
                                     />
