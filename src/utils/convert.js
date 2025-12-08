@@ -83,12 +83,10 @@ export class RPNTransducer {
             step++;
 
             if (this.isNumber(token)) {
-                // Число — добавить в выход
                 this.output.push(token);
                 this.addTrace(step, token, this.stack, this.output);
             }
             else if (this.isOperator(token)) {
-                // Оператор — управление стеком по приоритету
                 while (
                     this.stack.length > 0 &&
                     this.stack[this.stack.length - 1] !== '(' &&
@@ -101,12 +99,10 @@ export class RPNTransducer {
                 this.addTrace(step, token, this.stack, this.output);
             }
             else if (token === '(') {
-                // Открывающая скобка — на стек
                 this.stack.push(token);
                 this.addTrace(step, token, this.stack, this.output);
             }
             else if (token === ')') {
-                // Закрывающая скобка — выталкиваем до '('
                 let foundOpen = false;
                 while (this.stack.length > 0) {
                     const op = this.stack.pop();
@@ -123,7 +119,6 @@ export class RPNTransducer {
             }
         }
 
-        // Конец выражения — выталкиваем весь стек
         while (this.stack.length > 0) {
             const op = this.stack.pop();
             if (op === '(') {
