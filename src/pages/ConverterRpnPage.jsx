@@ -1,6 +1,7 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
-import {RPNTransducer} from '../utils/convert.js';
-import {motion, AnimatePresence} from "framer-motion";
+// ConverterRpnPage.jsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RPNTransducer } from '../utils/convert.js';
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ConverterRpnPage() {
     const [activeTab, setActiveTab] = useState('converter');
@@ -9,6 +10,7 @@ export default function ConverterRpnPage() {
     const [error, setError] = useState('');
     const [trace, setTrace] = useState([]);
 
+    // Важно: пересоздаём объект при каждом монтировании
     const transducer = useMemo(() => new RPNTransducer(), []);
 
     const runConversion = useCallback((expr) => {
@@ -27,7 +29,7 @@ export default function ConverterRpnPage() {
             setTrace(transducer.getTrace());
         } catch (e) {
             setError(e.message);
-            setTrace([]);
+            setTrace(transducer.getTrace()); // ← трассировка до ошибки!
         }
     }, [transducer]);
 
@@ -67,7 +69,7 @@ export default function ConverterRpnPage() {
             return `λ-переход: вытолкнуть ${popped} → в выход`;
         }
 
-        return 'Обработка токена';
+        return step.action || 'Обработка токена';
     };
 
     return (
@@ -90,7 +92,7 @@ export default function ConverterRpnPage() {
                             onClick={() => setActiveTab(tab)}
                             className={`!px-6 !py-3 text-lg font-medium transition-all
                                 ${activeTab === tab
-                                ? 'text-blue-600 border-b-2'
+                                ? 'text-blue-600 border-b-2 border-blue-600'
                                 : 'text-gray-600 hover:text-gray-900'
                             }`}
                         >
@@ -108,52 +110,19 @@ export default function ConverterRpnPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="mt-8"
+                        className="mt-8 w-full"
                     >
                         {activeTab === 'theory' && (
                             <div className="grid gap-8 lg:grid-cols-2">
                                 <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8">
                                     <h2 className="text-2xl font-bold text-blue-700 mb-6">КС-грамматика</h2>
                                     <pre className="bg-gray-100 !p-5 !mt-4 rounded-lg font-mono !text-sm overflow-x-auto">
-                                        {
-                                            `E → E + T | E − T | T`
-                                            +
-                                            `\nT → T * F | T / F | F`
-                                            +
-                                            `\nF → ( E ) | num`
-                                        }
+                                        {`E → E + T | E − T | T\nT → T * F | T / F | F\nF → ( E ) | num`}
                                     </pre>
                                 </div>
 
                                 <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8">
-                                    <h2 className="text-2xl font-bold text-blue-700 !mb-6">СУ-схема (вывод ОПЗ)</h2>
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-blue-600 text-white">
-                                        <tr>
-                                            <th className="!p-3 text-left">Правило</th>
-                                            <th className="!p-3 text-left">Действие</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {[
-                                            ['E → E₁ + T', 'E₁ T +'],
-                                            ['E → E₁ − T', 'E₁ T −'],
-                                            ['T → T₁ * F', 'T₁ F *'],
-                                            ['T → T₁ / F', 'T₁ F /'],
-                                            ['F → ( E )', 'E'],
-                                            ['F → num', 'num'],
-                                        ].map(([rule, action], i) => (
-                                            <tr key={i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                                <td className="!p-3 font-mono">{rule}</td>
-                                                <td className="!p-3 font-mono text-blue-700">{action}</td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8 lg:col-span-2">
-                                    <h2 className="text-2xl font-bold text-blue-700 mb-6">Примеры</h2>
+                                    <h2 className="text-2xl font-bold text-blue-700 !mb-6">Примеры</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {[
                                             ['(5 + 3) * 2', '5 3 + 2 *'],
@@ -161,7 +130,7 @@ export default function ConverterRpnPage() {
                                             ['10 / (2 + 3)', '10 2 3 + /'],
                                             ['1 + 2 * 3 - 4', '1 2 3 * + 4 -'],
                                         ].map(([inp, out]) => (
-                                            <div key={inp} className="bg-gray-50 !p-5 !mt-4 rounded-lg text-center">
+                                            <div key={inp} className="bg-gray-50 !p-5 rounded-lg text-center">
                                                 <code className="block text-lg font-mono text-blue-700 !mb-2">{inp}</code>
                                                 <span className="text-2xl text-gray-500">→</span>
                                                 <code className="block text-lg font-mono text-green-700 !mt-2">{out}</code>
@@ -195,7 +164,7 @@ export default function ConverterRpnPage() {
 
                                     {error ? (
                                         <div className="!mt-6 !p-6 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                                            <p className="text-red-700 font-mono text-lg">Ошибка: {error}</p>
+                                            <p className="text-red-700 font-mono text-lg whitespace-pre-wrap">{error}</p>
                                         </div>
                                     ) : result ? (
                                         <div className="!mt-6 !p-6 bg-green-50 border-l-4 border-green-500 rounded-lg">
@@ -227,12 +196,6 @@ export default function ConverterRpnPage() {
                                         />
                                     </div>
 
-                                    {error && (
-                                        <div className="!p-6 bg-red-50 border-l-4 border-red-500 rounded-lg !mb-6">
-                                            <p className="text-red-700 font-mono">Ошибка: {error}</p>
-                                        </div>
-                                    )}
-
                                     {trace.length > 0 && (
                                         <div className="overflow-x-auto rounded-xl border border-gray-300 shadow-sm">
                                             <table className="w-full text-sm">
@@ -247,17 +210,17 @@ export default function ConverterRpnPage() {
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200">
                                                 {trace.map((step, i) => {
-                                                    const isLambda = step.input === 'λ';
+                                                    const isError = step.isError;
                                                     return (
                                                         <tr
                                                             key={i}
-                                                            className={`${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition`}
+                                                            className={`${isError ? 'bg-red-100 border-l-4 border-red-600' : i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition`}
                                                         >
                                                             <td className="!px-6 !py-5 text-center font-bold text-blue-700">
                                                                 {step.step}
                                                             </td>
                                                             <td className="!px-6 !py-5 text-center font-mono">
-                                                                {isLambda ? (
+                                                                {step.input === 'λ' ? (
                                                                     <span className="text-purple-600 font-bold text-lg">λ</span>
                                                                 ) : (
                                                                     <code className="bg-gray-100 !px-2 !py-1 rounded text-base">
@@ -266,7 +229,11 @@ export default function ConverterRpnPage() {
                                                                 )}
                                                             </td>
                                                             <td className="!px-10 !py-5 font-mono text-gray-800">
-                                                                [{step.stack.length === 0 ? 'пусто' : step.stack.join(' , ')}]
+                                                                [{step.stack.length === 1 && step.stack[0] === 'Z' ? 'Z' :
+                                                                step.stack.slice(0, -1).join(' , ') +
+                                                                (step.stack.length > 1 ? ' | ' : '') +
+                                                                (step.stack[step.stack.length - 1] === 'Z' ? 'Z' : step.stack[step.stack.length - 1])
+                                                            }]
                                                             </td>
                                                             <td className="px-10 py-5 font-mono text-green-700">
                                                                 {step.output.join(' ') || '—'}
@@ -280,17 +247,26 @@ export default function ConverterRpnPage() {
                                                 </tbody>
                                             </table>
 
-                                            <div className="bg-green-50 border-t-4 border-green-500 !px-8 !py-6 text-center">
-                                                <p className="text-green-800 font-bold text-xl">
-                                                    Преобразование завершено успешно
-                                                </p>
-                                                <p className="!mt-3 text-lg">
-                                                    Результат:{' '}
-                                                    <code className="text-2xl font-mono bg-green-100 !px-5 !py-2 rounded-lg text-green-800">
-                                                        {result}
-                                                    </code>
-                                                </p>
-                                            </div>
+                                            {transducer.hasError?.() ? (
+                                                <div className="bg-red-50 border-t-4 border-red-600 !px-8 !py-6">
+                                                    <p className="text-red-800 font-bold text-xl">Отказ МП-автомата</p>
+                                                    <pre className="text-sm text-red-700 font-mono whitespace-pre-wrap !mt-3">
+                                                        {transducer.getError?.()}
+                                                    </pre>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-green-50 border-t-4 border-green-500 !px-8 !py-6 text-center">
+                                                    <p className="text-green-800 font-bold text-xl">
+                                                        Преобразование завершено успешно
+                                                    </p>
+                                                    <p className="!mt-3 text-lg">
+                                                        Результат:{' '}
+                                                        <code className="text-2xl font-mono bg-green-100 !px-5 !py-2 rounded-lg text-green-800">
+                                                            {result}
+                                                        </code>
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
