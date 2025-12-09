@@ -9,6 +9,7 @@ export class RPNTransducer {
         this.stack = [];
         this.output = [];
         this.trace = [];
+        this.stepCounter = 0;
     }
 
     precedence(op) {
@@ -52,12 +53,17 @@ export class RPNTransducer {
         return tokens;
     }
 
-    addTrace(step, input, stack, output) {
+    addTrace(inputToken, currentStack, currentOutput) {
+        const prevStack = this.trace.length > 0
+            ? this.trace[this.trace.length - 1].stack
+            : [];
+
         this.trace.push({
-            step,
-            input,
-            stack: [...stack],
-            output: [...output]
+            step: ++this.stepCounter,
+            input: inputToken === 'λ' ? 'λ' : inputToken,
+            stack: [...currentStack],
+            output: [...currentOutput],
+            prevStack: prevStack
         });
     }
 
@@ -65,42 +71,24 @@ export class RPNTransducer {
         this.stack = [];
         this.output = [];
         this.trace = [];
+        this.stepCounter = 0;
 
-        let tokens;
-        try {
-            tokens = this.tokenize(expression);
-        } catch (e) {
-            throw new Error(e.message);
-        }
+        const tokens = this.tokenize(expression.trim());
 
         if (tokens.length === 0) {
             throw new Error('Пустое выражение');
         }
 
-        let step = 0;
+        this.addTrace('начало', this.stack, this.output);
 
         for (let token of tokens) {
-            step++;
-
             if (this.isNumber(token)) {
                 this.output.push(token);
-                this.addTrace(step, token, this.stack, this.output);
-            }
-            else if (this.isOperator(token)) {
-                while (
-                    this.stack.length > 0 &&
-                    this.stack[this.stack.length - 1] !== '(' &&
-                    this.isOperator(this.stack[this.stack.length - 1]) &&
-                    this.precedence(this.stack[this.stack.length - 1]) >= this.precedence(token)
-                    ) {
-                    this.output.push(this.stack.pop());
-                }
-                this.stack.push(token);
-                this.addTrace(step, token, this.stack, this.output);
+                this.addTrace(token, this.stack, this.output);
             }
             else if (token === '(') {
                 this.stack.push(token);
-                this.addTrace(step, token, this.stack, this.output);
+                this.addTrace(token, this.stack, this.output);
             }
             else if (token === ')') {
                 let foundOpen = false;
@@ -111,26 +99,53 @@ export class RPNTransducer {
                         break;
                     }
                     this.output.push(op);
+                    this.addTrace(token, this.stack, this.output);
                 }
                 if (!foundOpen) {
                     throw new Error('Несоответствие скобок: нет открывающей скобки');
                 }
-                this.addTrace(step, token, this.stack, this.output);
+                this.addTrace(token, this.stack, this.output);
+            }
+            else if (this.isOperator(token)) {
+                while (
+                    this.stack.length > 0 &&
+                    this.stack[this.stack.length - 1] !== '(' &&
+                    this.isOperator(this.stack[this.stack.length - 1]) &&
+                    this.precedence(this.stack[this.stack.length - 1]) >= this.precedence(token)
+                    ) {
+                    this.output.push(this.stack.pop());
+                    this.addTrace(token, this.stack, this.output);
+                }
+                this.stack.push(token);
+                this.addTrace(token, this.stack, this.output);
             }
         }
 
         while (this.stack.length > 0) {
             const op = this.stack.pop();
             if (op === '(') {
-                throw new Error('Несоответствие скобок: есть необработанная открывающая скобка');
+                throw new Error('Несоответствие скобок: есть лишняя открывающая скобка');
             }
             this.output.push(op);
+            this.addTrace('λ', this.stack, this.output);
         }
+
+        this.addTrace('конец', this.stack, this.output);
 
         return this.output.join(' ');
     }
 
     getTrace() {
         return this.trace;
+    }
+
+    printTrace() {
+        console.table(this.trace.map(t => ({
+            'Шаг': t.step,
+            'Вход': t.input,
+            'Стек': `[${t.stack.join(' , ') || 'пусто'}]`,
+            'Выход': t.output.join(' ') || '—',
+            'Действие': '→ смотри UI'
+        })));
     }
 }
