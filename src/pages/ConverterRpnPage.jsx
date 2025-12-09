@@ -66,6 +66,7 @@ export default function ConverterRpnPage() {
                                     : 'text-gray-600 hover:text-gray-900'
                             }`}
                         >
+                            {tab === 'theory' && 'Теория'}
                             {tab === 'converter' && 'Преобразователь'}
                             {tab === 'trace' && 'Трассировка'}
                             {activeTab === tab && (
@@ -74,6 +75,77 @@ export default function ConverterRpnPage() {
                         </button>
                     ))}
                 </div>
+
+                {activeTab === 'theory' && (
+                    <div className="w-xl flex items-center justify-center flex-col !space-y-8">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8">
+                            <h2 className="text-2xl font-bold text-blue-700 !mb-6">
+                                Этап 1: КС-грамматика и СУ-схема
+                            </h2>
+                            <h3 className="text-xl font-semibold !mb-3">КС-грамматика:</h3>
+                            <pre className="bg-gray-100 !p-5 rounded-lg font-mono text-sm">
+                                {`E → E + T | E − T | T
+                                T → T * F | T / F | F
+                                F → ( E ) | num`}
+                            </pre>
+
+                            <h3 className="text-xl font-semibold !mt-8 !mb-3">СУ-схема (вывод ОПЗ):</h3>
+                            <table className="w-full border-collapse">
+                                <thead>
+                                <tr className="bg-blue-600 text-white">
+                                    <th className="!p-4 text-left">Правило</th>
+                                    <th className="!p-4 text-left">Семантическое действие</th>
+                                </tr>
+                                </thead>
+                                <tbody className="text-sm">
+                                {[
+                                    ['E → E₁ + T', 'E₁.code  T.code  +'],
+                                    ['E → E₁ - T', 'E₁.code  T.code  -'],
+                                    ['T → T₁ * F', 'T₁.code  F.code  *'],
+                                    ['T → T₁ / F', 'T₁.code  F.code  /'],
+                                    ['F → ( E )', 'E.code'],
+                                    ['F → num', 'num'],
+                                ].map(([rule, action], i) => (
+                                    <tr key={i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                                        <td className="!p-4 font-mono">{rule}</td>
+                                        <td className="!p-4 font-mono text-blue-700">{action}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8">
+                            <h2 className="text-2xl font-bold text-blue-700 !mb-6">
+                                Этап 2: МП-преобразователь
+                            </h2>
+                            <p className="text-wrap text-gray-700 !mb-4">
+                                Алгоритм «Шунтирующий двор» — это классическая реализация детерминированного МП-преобразователя
+                                с одним состоянием и стеком для управления приоритетами.
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 !p-8">
+                            <h2 className="text-2xl font-bold text-blue-700 !mb-6">
+                                Примеры преобразований
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {[
+                                    ['(5 + 3) * 2', '5 3 + 2 *'],
+                                    ['2 * 3 + 4', '2 3 * 4 +'],
+                                    ['10 / (2 + 3)', '10 2 3 + /'],
+                                    ['1 + 2 * 3 - 4', '1 2 3 * + 4 -'],
+                                ].map(([inp, out]) => (
+                                    <div key={inp} className="bg-gray-50 !p-5 rounded-lg">
+                                        <code className="block text-lg font-mono text-blue-700 !mb-2">{inp}</code>
+                                        <span className="text-2xl text-gray-500">→</span>
+                                        <code className="block text-lg font-mono text-green-700 !mt-2">{out}</code>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {activeTab === 'converter' && (
                     <div className="!space-y-8">
