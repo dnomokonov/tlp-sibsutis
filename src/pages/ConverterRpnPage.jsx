@@ -10,7 +10,6 @@ export default function ConverterRpnPage() {
     const [error, setError] = useState('');
     const [trace, setTrace] = useState([]);
 
-    // Важно: пересоздаём объект при каждом монтировании
     const transducer = useMemo(() => new RPNTransducer(), []);
 
     const runConversion = useCallback((expr) => {
@@ -29,7 +28,7 @@ export default function ConverterRpnPage() {
             setTrace(transducer.getTrace());
         } catch (e) {
             setError(e.message);
-            setTrace(transducer.getTrace()); // ← трассировка до ошибки!
+            setTrace(transducer.getTrace());
         }
     }, [transducer]);
 
@@ -99,6 +98,7 @@ export default function ConverterRpnPage() {
                             {tab === 'theory' && 'Теория'}
                             {tab === 'converter' && 'Преобразователь'}
                             {tab === 'trace' && 'Трассировка'}
+
                         </button>
                     ))}
                 </div>
@@ -110,19 +110,52 @@ export default function ConverterRpnPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="mt-8 w-full"
+                        className="flex justify-center mt-8 w-full"
                     >
                         {activeTab === 'theory' && (
                             <div className="grid gap-8 lg:grid-cols-2">
                                 <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8">
                                     <h2 className="text-2xl font-bold text-blue-700 mb-6">КС-грамматика</h2>
                                     <pre className="bg-gray-100 !p-5 !mt-4 rounded-lg font-mono !text-sm overflow-x-auto">
-                                        {`E → E + T | E − T | T\nT → T * F | T / F | F\nF → ( E ) | num`}
+                                        {
+                                            `E → E + T | E − T | T`
+                                            +
+                                            `\nT → T * F | T / F | F`
+                                            +
+                                            `\nF → ( E ) | num`
+                                        }
                                     </pre>
                                 </div>
 
                                 <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8">
-                                    <h2 className="text-2xl font-bold text-blue-700 !mb-6">Примеры</h2>
+                                    <h2 className="text-2xl font-bold text-blue-700 !mb-6">СУ-схема (вывод ОПЗ)</h2>
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-blue-600 text-white">
+                                        <tr>
+                                            <th className="!p-3 text-left">Правило</th>
+                                            <th className="!p-3 text-left">Действие</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {[
+                                            ['E → E₁ + T', 'E₁ T +'],
+                                            ['E → E₁ − T', 'E₁ T −'],
+                                            ['T → T₁ * F', 'T₁ F *'],
+                                            ['T → T₁ / F', 'T₁ F /'],
+                                            ['F → ( E )', 'E'],
+                                            ['F → num', 'num'],
+                                        ].map(([rule, action], i) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                                                <td className="!p-3 font-mono">{rule}</td>
+                                                <td className="!p-3 font-mono text-blue-700">{action}</td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8 lg:col-span-2">
+                                    <h2 className="text-2xl font-bold text-blue-700 mb-6">Примеры</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {[
                                             ['(5 + 3) * 2', '5 3 + 2 *'],
@@ -130,7 +163,7 @@ export default function ConverterRpnPage() {
                                             ['10 / (2 + 3)', '10 2 3 + /'],
                                             ['1 + 2 * 3 - 4', '1 2 3 * + 4 -'],
                                         ].map(([inp, out]) => (
-                                            <div key={inp} className="bg-gray-50 !p-5 rounded-lg text-center">
+                                            <div key={inp} className="bg-gray-50 !p-5 !mt-4 rounded-lg text-center">
                                                 <code className="block text-lg font-mono text-blue-700 !mb-2">{inp}</code>
                                                 <span className="text-2xl text-gray-500">→</span>
                                                 <code className="block text-lg font-mono text-green-700 !mt-2">{out}</code>
@@ -142,8 +175,8 @@ export default function ConverterRpnPage() {
                         )}
 
                         {activeTab === 'converter' && (
-                            <div className="max-w-4xl mx-auto">
-                                <div className="bg-white rounded-xl shadow-md border border-gray-200 !p-8">
+                            <div className="flex justify-center max-w-4xl mx-auto">
+                                <div className="rounded-xl shadow-md border border-gray-200 !p-8">
                                     <h2 className="text-2xl font-bold !mb-6">Интерактивный преобразователь</h2>
 
                                     <label className="block text-sm font-medium text-gray-700 !mb-2">
