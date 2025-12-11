@@ -88,6 +88,32 @@ function HomePage() {
             </div>
           </Link>
 
+          <Link
+            to="/rgr"
+            className="group bg-white/80 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="text-center !p-4">
+              <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-rose-200 transition-colors">
+                <svg className="w-8 h-8 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2.5" y="5" width="7" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M4 7.5h4M4 10h2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <rect x="14.5" y="5" width="7" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M16 10.5h4M16 8h2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                  <path d="M10.5 10.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M13.5 10.5l-1.2-1.2M13.5 10.5l-1.2 1.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M8 18h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-rose-600 transition-colors">
+                Транслятор
+              </h2>
+              <div className="inline-flex items-center text-rose-700 font-semibold group-hover:text-rose-700  transition-colors">
+                Транслятор простого языка в HTML
+              </div>
+            </div>
+          </Link>
+
         </div>
       </div>
     </div>

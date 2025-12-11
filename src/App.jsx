@@ -4,6 +4,7 @@ import AutomataMinimization from './pages/AutomataMinimization'
 import HomePage from './pages/HomePage'
 import DMPautomaticPage from './pages/DMPautomaticPage'
 import ConverterRpnPage from "./pages/ConverterRpnPage.jsx";
+import ParseTextHTMLPage from "./pages/ParseTextHTMLPage.jsx";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/automata" element={<AutomataMinimization />} />
             <Route path="/dmpautomatics" element={<DMPautomaticPage />} />
             <Route path="/conrpn" element={<ConverterRpnPage />} />
+            <Route path="/rgr" element={<ParseTextHTMLPage />} />
         </Routes>
     </Router>
   )
