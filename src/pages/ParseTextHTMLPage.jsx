@@ -180,7 +180,7 @@ function ParseTextHTMLPage() {
                         )}
 
                         {activeMenu === "Program" && (
-                            <div className="flex flex-col items-center gap-4 w-xl !space-x-2 !mb-4">
+                            <div className="flex flex-col items-center gap-4 w-xl !mb-4">
                                 <label className="flex flex-col gap-2 text-sm font-bold text-gray-500">
                                     Простой текст
                                     <textarea
