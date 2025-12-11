@@ -1,4 +1,3 @@
-// ConverterRpnPage.jsx
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RPNTransducer } from '../utils/convert.js';
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,7 +73,6 @@ export default function ConverterRpnPage() {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
             <div className="flex items-center flex-col max-w-5xl mx-auto !px-4 !py-8 w-full">
-
                 <div className="text-center !mb-10">
                     <h1 className="text-4xl font-bold text-blue-600 !mb-3 text-center">
                         МП-преобразователь в ОПЗ
@@ -175,7 +173,7 @@ export default function ConverterRpnPage() {
                         )}
 
                         {activeTab === 'converter' && (
-                            <div className="flex justify-center max-w-4xl mx-auto">
+                            <div className="flex justify-center max-w-4xl mx-auto bg-white">
                                 <div className="rounded-xl shadow-md border border-gray-200 !p-8">
                                     <h2 className="text-2xl font-bold !mb-6">Интерактивный преобразователь</h2>
 
