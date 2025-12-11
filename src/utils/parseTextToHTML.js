@@ -78,7 +78,7 @@ function buildBlocks(source, steps, errors) {
                 steps.push({
                     level: "block",
                     rule: "code-block-end",
-                    description: "Конец блока кода ``` → <pre><code>...</code></pre>",
+                    description: "Конец блока кода ``` = <pre><code>...</code></pre>",
                     line: i + 1,
                     content: codeContent,
                 });
@@ -109,7 +109,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "heading",
-                description: `Распознан заголовок уровня ${level} → <h${level}>`,
+                description: `Распознан заголовок уровня ${level} = <h${level}>`,
                 line: i + 1,
                 content: line,
             });
@@ -130,7 +130,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "blockquote",
-                description: "Распознан блок цитаты → <blockquote>",
+                description: "Распознан блок цитаты = <blockquote>",
                 line: i + 1,
                 content,
             });
@@ -150,7 +150,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "ordered-list",
-                description: "Распознан нумерованный список → <ol><li>...</li></ol>",
+                description: "Распознан нумерованный список = <ol><li>...</li></ol>",
                 line: i + 1,
                 content: items.join(" | "),
             });
@@ -170,7 +170,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "unordered-list",
-                description: "Распознан маркированный список → <ul><li>...</li></ul>",
+                description: "Распознан маркированный список = <ul><li>...</li></ul>",
                 line: i + 1,
                 content: items.join(" | "),
             });
@@ -203,7 +203,7 @@ function buildBlocks(source, steps, errors) {
         steps.push({
             level: "block",
             rule: "paragraph",
-            description: "Распознан абзац → <p>",
+            description: "Распознан абзац = <p>",
             line: i + 1,
             content,
         });
@@ -236,7 +236,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "code-block",
-                description: "Рендер блока кода → <pre><code>",
+                description: "Рендер блока кода = <pre><code>",
                 blockIndex: index,
                 html,
             });
@@ -264,7 +264,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "blockquote",
-                description: "Рендер цитаты → <blockquote><p>",
+                description: "Рендер цитаты = <blockquote><p>",
                 blockIndex: index,
                 html,
             });
@@ -280,7 +280,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "ordered-list",
-                description: "Рендер нумерованного списка → <ol><li>",
+                description: "Рендер нумерованного списка = <ol><li>",
                 blockIndex: index,
                 html,
             });
@@ -296,7 +296,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "unordered-list",
-                description: "Рендер маркированного списка → <ul><li>",
+                description: "Рендер маркированного списка = <ul><li>",
                 blockIndex: index,
                 html,
             });
@@ -310,7 +310,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "paragraph",
-                description: "Рендер абзаца → <p>",
+                description: "Рендер абзаца = <p>",
                 blockIndex: index,
                 html,
             });
