@@ -20,6 +20,13 @@ function ParseTextHTMLPage() {
       setErrors(errors || []);
     };
 
+    const handleClearInput = () => {
+        setResultHtml('');
+        setSource('');
+        setSteps([]);
+        setErrors([]);
+    }
+
     return (
         <div className="min-h-screen flex items-start justify-center bg-gray-50">
             <div className="flex flex-col justify-center items-center !mt-30">
@@ -85,15 +92,90 @@ function ParseTextHTMLPage() {
 
                         {activeMenu === 'Task' && (
                             <div
-                                className="flex items-center max-w-xl !p-5 border border-gray-200 shadow-md rounded-lg bg-white"
+                                className="flex flex-col justify-center gap-6 max-w-xl"
                             >
-                                <p
-                                    className="text-start text-base font-medium text-gray-700"
-                                >
-                                    Написать транслятор из простого языка разметки в HTML. То есть,
-                                    создать парсер для языка, где *текст* становится {`<i>текст</i>`}, **текст**
-                                    — {`<b>текст</b>`}, и т.д.
-                                </p>
+                                <div className="!p-5 border border-gray-200 shadow-md rounded-lg bg-white">
+                                    <p
+                                        className="text-start text-base font-medium text-gray-700"
+                                    >
+                                        Написать транслятор из простого языка разметки в HTML. То есть,
+                                        создать парсер для языка, где *текст* становится {`<i>текст</i>`}, **текст**
+                                        — {`<b>текст</b>`}, и т.д.
+                                    </p>
+                                </div>
+
+                                <div className="!p-5 !mb-10 border border-gray-200 shadow-md rounded-lg bg-white">
+                                    <div className="flex flex-col gap-4">
+                                        <h2 className="text-center font-bold text-xl">Таблица поддерживаемых конструкций</h2>
+                                        <table className="min-w-full border border-gray-300 text-sm">
+                                            <thead className="">
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-300 !px-3 !py-2 text-left font-semibold">
+                                                        Конструкция
+                                                    </th>
+                                                    <th className="border border-gray-300 !px-3 !py-2 text-left font-semibold">
+                                                        Результат
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2"># Заголовок</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<h1>Заголовок</h1>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">## Заголовок</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<h2>Заголовок</h2>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">### - ######</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<h3> - <h6>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">Обычный текст</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<p>Текст</p>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">*текст*</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<em>текст</em>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">**текст**</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<strong>текст</strong>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">***текст***</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<strong><em>текст</em></strong>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">&gt; текст</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<blockquote><p>текст</p></blockquote>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">1. элемент</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<ol><li>элемент</li>...</ol>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">- элемент</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<ul><li>элемент</li>...</ul>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">* элемент</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<ul><li>элемент</li>...</ul>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">`код`</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<code>код</code>`}</td>
+                                                </tr>
+                                                <tr className="hover:bg-gray-50">
+                                                    <td className="border border-gray-300 !px-3 !py-2">```код```</td>
+                                                    <td className="border border-gray-300 !px-3 !py-2">{`<pre><code>код</code></pre>`}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                             </div>
                         )}
 
@@ -118,16 +200,26 @@ function ParseTextHTMLPage() {
                                     </div>
                                 )}
 
-                                <button
-                                    className="!px-6 !py-2 text-white rounded bg-blue-600"
-                                    type="button"
-                                    onClick={handleTransform}
-                                >
-                                    Преобразовать
-                                </button>
+                                <div className="flex items-center justify-center gap-4">
+                                    <button
+                                        className="!px-6 !py-2 text-white rounded bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                                        type="button"
+                                        onClick={handleTransform}
+                                    >
+                                        Преобразовать
+                                    </button>
+
+                                    <button
+                                        className="!px-6 !py-2 text-white rounded bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+                                        type="button"
+                                        onClick={handleClearInput}
+                                    >
+                                        Очистить
+                                    </button>
+                                </div>
 
                                 {steps.length > 0 && (
-                                    <div className="!mt-4 w-full max-w-xl border border-gray-200 rounded-lg bg-white !p-4">
+                                    <div className="w-full border border-gray-200 rounded-lg bg-white !p-4">
                                         <h3 className="font-bold !mb-2">Шаги трансляции</h3>
                                         <div className="overflow-auto max-h-80">
                                             <table className="min-w-full text-xs border-collapse">
@@ -175,7 +267,7 @@ function ParseTextHTMLPage() {
                                         <div className="border border-gray-200 rounded-lg bg-white !p-4">
                                             <h3 className="font-bold !mb-2">Итоговый HTML (просмотр)</h3>
                                             <div
-                                                className="prose max-w-none"
+                                                className="max-w-none !pl-4 text-left !space-y-2 [&_ul]:list-disc ![&_ul]:pl-5 [&_ol]:list-decimal ![&_ol]:pl-5 ![&_li]:my-1"
                                                 dangerouslySetInnerHTML={{ __html: resultHtml }}
                                             />
                                         </div>
