@@ -18,9 +18,9 @@ function applyInlineFormatting(text, steps) {
 
     applyRule(
         /\*\*\*(.+?)\*\*\*/g,
-        "<strong><em>$1</em></strong>",
+        "<em><strong>$1</strong></em>",
         "bold-italic",
-        "Замена ***текст*** на <strong><em>текст</em></strong>"
+        "Замена ***текст*** на <em><strong>текст</strong></em>"
     );
 
     applyRule(
@@ -53,66 +53,11 @@ function buildBlocks(source, steps, errors) {
 
     let i = 0;
     let inCodeBlock = false;
-    let codeBuffer = [];
 
     const isCodeFence = (line) => /^```/.test(line.trim());
 
     while (i < lines.length) {
         const line = lines[i];
-        if (isCodeFence(line)) {
-            const trimmed = line.trim();
-
-            if (/^```[^`].*```$/.test(trimmed)) {
-                const content = trimmed
-                    .replace(/^```/, "")
-                    .replace(/```$/, "")
-                    .trim();
-                blocks.push({ type: "code", content });
-                steps.push({
-                    level: "block",
-                    rule: "code-inline-block",
-                    description: "Однострочный блок кода ``` code ```",
-                    line: i + 1,
-                    content,
-                });
-                i += 1;
-                continue;
-            }
-
-            if (!inCodeBlock) {
-                inCodeBlock = true;
-                codeBuffer = [];
-                steps.push({
-                    level: "block",
-                    rule: "code-block-start",
-                    description: "Начало блока кода ```",
-                    line: i + 1,
-                    content: line,
-                });
-                i += 1;
-                continue;
-            }
-
-            inCodeBlock = false;
-            const codeContent = codeBuffer.join("\n");
-            blocks.push({ type: "code", content: codeContent });
-            steps.push({
-                level: "block",
-                rule: "code-block-end",
-                description: "Конец блока кода ```",
-                line: i + 1,
-                content: codeContent,
-            });
-            codeBuffer = [];
-            i += 1;
-            continue;
-        }
-
-        if (inCodeBlock) {
-            codeBuffer.push(line);
-            i += 1;
-            continue;
-        }
 
         if (line.trim() === "") {
             i += 1;

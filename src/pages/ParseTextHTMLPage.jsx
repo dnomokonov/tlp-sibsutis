@@ -167,10 +167,6 @@ function ParseTextHTMLPage() {
                                                     <td className="border border-gray-300 !px-3 !py-2">`код`</td>
                                                     <td className="border border-gray-300 !px-3 !py-2">{`<code>код</code>`}</td>
                                                 </tr>
-                                                <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-300 !px-3 !py-2">```код```</td>
-                                                    <td className="border border-gray-300 !px-3 !py-2">{`<pre><code>код</code></pre>`}</td>
-                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
