@@ -16,7 +16,6 @@ function applyInlineFormatting(text, steps) {
         }
     }
 
-    // сначала *** (bold+italic), затем **, затем *
     applyRule(
         /\*\*\*(.+?)\*\*\*/g,
         "<strong><em>$1</em></strong>",
@@ -38,9 +37,8 @@ function applyInlineFormatting(text, steps) {
         "Замена *текст* на <em>текст</em>"
     );
 
-    // Инлайновый код
     applyRule(
-        /`(.+?)`/g,
+        /`([^`]*)`/g,
         "<code>$1</code>",
         "code-inline",
         "Замена `код` на <code>код</code>"
@@ -57,10 +55,30 @@ function buildBlocks(source, steps, errors) {
     let inCodeBlock = false;
     let codeBuffer = [];
 
+    const isCodeFence = (line) => /^```/.test(line.trim());
+
     while (i < lines.length) {
         const line = lines[i];
+        if (isCodeFence(line)) {
+            const trimmed = line.trim();
 
-        if (line.trim().startsWith("```")) {
+            if (/^```[^`].*```$/.test(trimmed)) {
+                const content = trimmed
+                    .replace(/^```/, "")
+                    .replace(/```$/, "")
+                    .trim();
+                blocks.push({ type: "code", content });
+                steps.push({
+                    level: "block",
+                    rule: "code-inline-block",
+                    description: "Однострочный блок кода ``` code ```",
+                    line: i + 1,
+                    content,
+                });
+                i += 1;
+                continue;
+            }
+
             if (!inCodeBlock) {
                 inCodeBlock = true;
                 codeBuffer = [];
@@ -71,19 +89,21 @@ function buildBlocks(source, steps, errors) {
                     line: i + 1,
                     content: line,
                 });
-            } else {
-                inCodeBlock = false;
-                const codeContent = codeBuffer.join("\n");
-                blocks.push({ type: "code", content: codeContent });
-                steps.push({
-                    level: "block",
-                    rule: "code-block-end",
-                    description: "Конец блока кода ``` = <pre><code>...</code></pre>",
-                    line: i + 1,
-                    content: codeContent,
-                });
-                codeBuffer = [];
+                i += 1;
+                continue;
             }
+
+            inCodeBlock = false;
+            const codeContent = codeBuffer.join("\n");
+            blocks.push({ type: "code", content: codeContent });
+            steps.push({
+                level: "block",
+                rule: "code-block-end",
+                description: "Конец блока кода ```",
+                line: i + 1,
+                content: codeContent,
+            });
+            codeBuffer = [];
             i += 1;
             continue;
         }
@@ -94,22 +114,20 @@ function buildBlocks(source, steps, errors) {
             continue;
         }
 
-        // Пустая строка
         if (line.trim() === "") {
             i += 1;
             continue;
         }
 
-        // Заголовки: # ... ######
         const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
         if (headingMatch) {
-            const level = headingMatch[1].length;
-            const content = headingMatch[2];
+            const level = headingMatch.length;[1]
+            const content = headingMatch;[2]
             blocks.push({ type: "heading", level, content });
             steps.push({
                 level: "block",
                 rule: "heading",
-                description: `Распознан заголовок уровня ${level} = <h${level}>`,
+                description: `Распознан заголовок уровня ${level}  <h${level}>`,
                 line: i + 1,
                 content: line,
             });
@@ -117,7 +135,6 @@ function buildBlocks(source, steps, errors) {
             continue;
         }
 
-        // Blockquote: > text
         if (line.trim().startsWith(">")) {
             const quoteLines = [];
             let j = i;
@@ -130,7 +147,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "blockquote",
-                description: "Распознан блок цитаты = <blockquote>",
+                description: "Распознан блок цитаты  <blockquote>",
                 line: i + 1,
                 content,
             });
@@ -138,7 +155,6 @@ function buildBlocks(source, steps, errors) {
             continue;
         }
 
-        // Ordered list: 1. item
         if (/^\s*\d+\.\s+/.test(line)) {
             const items = [];
             let j = i;
@@ -150,7 +166,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "ordered-list",
-                description: "Распознан нумерованный список = <ol><li>...</li></ol>",
+                description: "Распознан нумерованный список  <ol><li>...</li></ol>",
                 line: i + 1,
                 content: items.join(" | "),
             });
@@ -158,7 +174,6 @@ function buildBlocks(source, steps, errors) {
             continue;
         }
 
-        // Unordered list: - item / * item
         if (/^\s*([-*])\s+/.test(line)) {
             const items = [];
             let j = i;
@@ -170,7 +185,7 @@ function buildBlocks(source, steps, errors) {
             steps.push({
                 level: "block",
                 rule: "unordered-list",
-                description: "Распознан маркированный список = <ul><li>...</li></ul>",
+                description: "Распознан маркированный список  <ul><li>...</li></ul>",
                 line: i + 1,
                 content: items.join(" | "),
             });
@@ -178,32 +193,28 @@ function buildBlocks(source, steps, errors) {
             continue;
         }
 
-        // Параграф
         const paraLines = [line];
         let j = i + 1;
         while (j < lines.length && lines[j].trim() !== "") {
             const l = lines[j];
-
             if (
                 l.trim().startsWith("#") ||
                 l.trim().startsWith(">") ||
                 /^\s*\d+\.\s+/.test(l) ||
                 /^\s*([-*])\s+/.test(l) ||
-                l.trim().startsWith("```")
+                isCodeFence(l)
             ) {
                 break;
             }
-
             paraLines.push(l);
             j += 1;
         }
-
         const content = paraLines.join("\n");
         blocks.push({ type: "paragraph", content });
         steps.push({
             level: "block",
             rule: "paragraph",
-            description: "Распознан абзац = <p>",
+            description: "Распознан абзац  <p>",
             line: i + 1,
             content,
         });
@@ -236,7 +247,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "code-block",
-                description: "Рендер блока кода = <pre><code>",
+                description: "Рендер блока кода  <pre><code>",
                 blockIndex: index,
                 html,
             });
@@ -264,7 +275,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "blockquote",
-                description: "Рендер цитаты = <blockquote><p>",
+                description: "Рендер цитаты  <blockquote><p>",
                 blockIndex: index,
                 html,
             });
@@ -280,7 +291,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "ordered-list",
-                description: "Рендер нумерованного списка = <ol><li>",
+                description: "Рендер нумерованного списка  <ol><li>",
                 blockIndex: index,
                 html,
             });
@@ -296,7 +307,7 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "unordered-list",
-                description: "Рендер маркированного списка = <ul><li>",
+                description: "Рендер маркированного списка  <ul><li>",
                 blockIndex: index,
                 html,
             });
@@ -310,11 +321,10 @@ function renderBlocksToHTML(blocks, steps) {
             steps.push({
                 level: "render",
                 rule: "paragraph",
-                description: "Рендер абзаца = <p>",
+                description: "Рендер абзаца  <p>",
                 blockIndex: index,
                 html,
             });
-            continue;
         }
     }
 
