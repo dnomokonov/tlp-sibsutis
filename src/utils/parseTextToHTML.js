@@ -66,8 +66,8 @@ function buildBlocks(source, steps, errors) {
 
         const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
         if (headingMatch) {
-            const level = headingMatch.length;[1]
-            const content = headingMatch;[2]
+            const level = headingMatch[1].length;
+            const content = headingMatch[2];
             blocks.push({ type: "heading", level, content });
             steps.push({
                 level: "block",
